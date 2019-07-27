@@ -1,0 +1,29 @@
+#!/usr/bin/env stap
+# This script continuously lists the top 20 systemcalls on the system
+global syscalls
+
+function print_top () {
+        cnt = 0
+        /* 打印到终端 */
+        log("SYSCALL\t\t\t\t\t\tCOUNT")
+        foreach ([name] in syscalls-) {
+            if (name == "stapio")  continue
+
+            printf("%-20s\t\t%5d\n",name, syscalls[name])
+            if (cnt++ >= 5)
+                break
+        }
+        printf("--------------------------------------\n")
+        delete syscalls
+}
+
+probe syscall.read {
+    /* # 跟踪的程序名称 */
+    syscalls[execname()]++
+}
+
+/* # print top syscalls every 5 seconds */
+probe timer.ms(5000) {
+    print_top ()
+    exit()
+}

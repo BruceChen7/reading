@@ -1,0 +1,25 @@
+#!/usr/env/stap
+global timestamp, stat
+
+/*这里的timestamp是数组*/
+probe scheduler.cpu_on {
+    if (!idle)
+        timestamp[cpu()] = gettimeofday_ns()
+}
+probe scheduler.cpu_off {
+    if (!idle && timestamp[cpu()])
+        stat[cpu()] <<< gettimeofday_ns() - timestamp[cpu()]
+}
+/* 每2秒统计一次 */
+probe timer.s(2) {
+    printf("\n==================================================\n")
+    /*按照CPU号从小到大来统计*/
+    foreach (cpu+ in stat) {
+        printf("\nCPU%d  count %d  min %d  max %d  avg %d\n", cpu,
+                @count(stat[cpu]), @min(stat[cpu]),
+                @max(stat[cpu]), @avg(stat[cpu]))
+         /* 画出分布图 */
+        print(@hist_log(stat[cpu]))
+    }
+    delete stat
+}

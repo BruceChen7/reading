@@ -1,0 +1,75 @@
+#! /usr/bin/env stap
+function trace(entry_p, extra) {
+  /* 如果输入的probe，不止一个，那么要查看当前线程是否在跟踪线程中 */
+  /* 如果不在，那么printf 不会执行 */
+  %( $# > 1 %? if (tid() in trace) %)
+  
+  /* thread_indent会返回一个带适当缩进的字符串 */
+  注意理解，下面有例子
+  printf("%s%s%s %s\n",
+         thread_indent (entry_p),
+         (entry_p>0?"->":"<-"),
+         ppfunc (),
+         extra)
+}
+
+/* 如果输入的probe不止一个 */
+/* 那么在%(和%)将会执行 */
+
+%( $# > 1 %?
+global trace
+probe $2.call {
+  trace[tid()] = 1
+}
+probe $2.return {
+  delete trace[tid()]
+}
+%)
+
+probe $1.call   { trace(1, $$parms) }
+probe $1.return { trace(-1, $$return) }
+
+/* $ stap para-callgraph.stp 'process("/bin/ls").function("*")' \ */
+/* 'process("/bin/ls").function("main")' -c "/bin/ls > /dev/null" */
+/*  */
+/*      0 ls(24779):->main argc=0x1 argv=0x7ffe16646868 */
+/*      4 ls(24779): ->set_program_name argv0=0x7ffe166486e6 */
+/*      8 ls(24779): <-set_program_name  */
+/*     33 ls(24779): ->atexit  */
+/*     35 ls(24779): <-atexit  */
+/*     42 ls(24779): ->human_options spec=0x0 opts=0x61d100 block_size=0x61d0f8 */
+/*     44 ls(24779): <-human_options return=0x0 */
+/*     46 ls(24779): ->clone_quoting_options o=0x0 */
+/*     49 ls(24779):  ->xmemdup p=0x61d2e0 s=0x38 */
+/*     51 ls(24779):   ->xmalloc n=0x38 */
+/*     54 ls(24779):   <-xmalloc return=0x1a15050 */
+/*     57 ls(24779):  <-xmemdup return=0x1a15050 */
+/*     58 ls(24779): <-clone_quoting_options return=0x1a15050 */
+/*     60 ls(24779): ->get_quoting_style o=0x1a15050 */
+/*     62 ls(24779): <-get_quoting_style return=0x0 */
+/*     63 ls(24779): ->clone_quoting_options o=0x0 */
+/*     65 ls(24779):  ->xmemdup p=0x61d2e0 s=0x38 */
+/*     66 ls(24779):   ->xmalloc n=0x38 */
+/*     68 ls(24779):   <-xmalloc return=0x1a15090 */
+/*     69 ls(24779):  <-xmemdup return=0x1a15090 */
+/*     70 ls(24779): <-clone_quoting_options return=0x1a15090 */
+/*     72 ls(24779): ->set_char_quoting o=0x1a15090 c=0x3a i=0x1 */
+/*     74 ls(24779): <-set_char_quoting return=0x0 */
+/*     76 ls(24779): ->xmalloc n=0x4b00 */
+/*     79 ls(24779): <-xmalloc return=0x1a150d0 */
+/*     80 ls(24779): ->clear_files  */
+/*     82 ls(24779): <-clear_files  */
+/*     84 ls(24779): ->queue_directory name=0x414546 realname=0x0 command_line_arg=0x1 */
+/*     86 ls(24779):  ->xmalloc n=0x20 */
+/*     88 ls(24779):  <-xmalloc return=0x1a19be0 */
+/*     89 ls(24779):  ->xstrdup string=0x414546 */
+/*     92 ls(24779):   ->xmemdup p=0x414546 s=0x2 */
+/*     93 ls(24779):    ->xmalloc n=0x2 */
+/*     95 ls(24779):    <-xmalloc return=0x1a19c10 */
+/*     96 ls(24779):   <-xmemdup return=0x1a19c10 */
+/*     97 ls(24779):  <-xstrdup return=0x1a19c10 */
+/*     98 ls(24779): <-queue_directory  */
+/*    104 ls(24779): ->clear_files  */
+/*    106 ls(24779): <-clear_files  */
+/*   1183 ls(24779): ->process_signals  */
+/*   1186 ls(24779): <-process_signals  */
