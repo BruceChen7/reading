@@ -1,3 +1,4 @@
+# -*- coding: UTF-8-*-
 # Naive implementation of the Paxos protocol.
 # Henry Robinson, 2009
 # Licensed under GPL v2
@@ -20,9 +21,7 @@
 # trivial to generalise this.
 
 # See bottom of file for demonstration of use.
-
 import threading, socket, pickle, Queue
-
 class Message( object ):
     MSG_ACCEPTOR_AGREE = 0
     MSG_ACCEPTOR_ACCEPT = 1
@@ -39,7 +38,7 @@ class Message( object ):
         self.proposalID, self.instanceID, self.to, self.source = message.proposalID, message.instanceID, message.source, message.to
         self.value = message.value
 
-        
+
 class MessagePump( threading.Thread ):
     """The MessagePump encapsulates the socket connection, and is responsible for feeding messages to its owner"""
     class MPHelper( threading.Thread ):
@@ -51,13 +50,17 @@ class MessagePump( threading.Thread ):
         def run( self ):
             while not self.owner.abort:
                 try:
+                    # 从fd中获取数
                     (bytes, addr) = self.owner.socket.recvfrom( 2048 )
+                    # 解析数据
                     msg = pickle.loads( bytes )
+                    # 消息来源
                     msg.source = addr[1]
+                    # 放到消息队列中
                     self.owner.queue.put( msg )
                 except:
                     pass
-    
+
     def __init__( self, owner, port, timeout=2 ):
         self.owner = owner
         threading.Thread.__init__( self )
@@ -65,18 +68,18 @@ class MessagePump( threading.Thread ):
         self.timeout = 2
         self.port = port
         self.socket = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
-        self.socket.setsockopt( socket.SOL_SOCKET, socket.SO_RCVBUF, 200000 )        
+        self.socket.setsockopt( socket.SOL_SOCKET, socket.SO_RCVBUF, 200000 )
         self.socket.bind( ("localhost", port) )
         self.socket.settimeout( timeout )
         self.queue = Queue.Queue( )
         self.helper = MessagePump.MPHelper( self )
-        
+
     def run( self ):
         self.helper.start( )
         while not self.abort:
             message = self.waitForMessage( )
             # This needs to be blocking, otherwise there's a world
-            # of multi-threaded pain awaiting us            
+            # of multi-threaded pain awaiting us
             self.owner.recvMessage( message )
 
     def waitForMessage( self ):
@@ -91,7 +94,7 @@ class MessagePump( threading.Thread ):
         address = ("localhost", message.to)
         self.socket.sendto( bytes, address )
         return True
-    
+
     def doAbort( self ):
         self.abort = True
 
@@ -114,8 +117,8 @@ class AdversarialMessagePump( MessagePump ):
         else:
             msg = None
         return msg
-        
-        
+
+
 
 class InstanceRecord( object ):
     """This is a bookkeeping class, which keeps a record of all proposals we've seen or undertaken for a given record,
@@ -138,7 +141,7 @@ class InstanceRecord( object ):
             if protocol.state == PaxosLeaderProtocol.STATE_ACCEPTED:
                 print "Deleting protocol"
                 del self.protocols[k]
-        
+
 class PaxosLeader( object ):
     def __init__(self, port, leaders=None, acceptors=None):
         self.port = port
@@ -150,7 +153,7 @@ class PaxosLeader( object ):
             self.acceptors = []
         else:
             self.acceptors = acceptors
-        self.group = self.leaders + self.acceptors        
+        self.group = self.leaders + self.acceptors
         self.isPrimary = False
         self.proposalCount = 0
         self.msgPump = MessagePump( self, port )
@@ -166,7 +169,7 @@ class PaxosLeader( object ):
     # These two classes listen for heartbeats from other leaders
     # and, if none appear, tell this leader that it should
     # be the primary
-        
+
     class HeartbeatListener( threading.Thread ):
         def __init__( self, leader ):
             self.leader = leader
@@ -178,12 +181,14 @@ class PaxosLeader( object ):
             self.queue.put( message )
 
         def doAbort( self ): self.abort = True
-            
+
         def run( self ):
             elapsed = 0
             while not self.abort:
+                # 获取当前的时间戳
                 s = time.time( )
                 try:
+                    # 阻塞2秒来获取包
                     hb = self.queue.get( True, 2 )
                     # Easy way to settle conflicts - if your port number is bigger than mine,
                     # you get to be the leader
@@ -196,10 +201,10 @@ class PaxosLeader( object ):
         def __init__( self, leader ):
             self.leader = leader
             self.abort = False
-            threading.Thread.__init__( self )            
+            threading.Thread.__init__( self )
 
         def doAbort( self ): self.abort = True
-            
+
         def run( self ):
             while not self.abort:
                 time.sleep( 1 )
@@ -213,10 +218,11 @@ class PaxosLeader( object ):
     #------------------------------------------------------
     def sendMessage( self, message ):
         self.msgPump.sendMessage( message )
-                
+
     def start( self ):
         self.hbSender.start( )
         self.hbListener.start( )
+        # 这个地方创建监听套接字，并接受client发送过来的消息
         self.msgPump.start( )
         self.stopped = False
 
@@ -232,10 +238,10 @@ class PaxosLeader( object ):
             if primary:
                 print "I (%s) am the leader" % self.port
             else:
-                print "I (%s) am NOT the leader" % self.port            
+                print "I (%s) am NOT the leader" % self.port
         self.isPrimary = primary
 
-    #------------------------------------------------------        
+    #------------------------------------------------------
 
     def getGroup( self ):
         return self.group
@@ -253,14 +259,14 @@ class PaxosLeader( object ):
         if instanceID in self.instances:
             return self.instances[ instanceID ].value
         return None
-    
+
     def getHistory( self ):
         return [ self.getInstanceValue( i ) for i in xrange( 1, self.highestInstance+1 ) ]
 
     def getNumAccepted( self ):
         return len( [v for v in self.getHistory( ) if v != None] )
-    
-    #------------------------------------------------------    
+
+    #------------------------------------------------------
 
     def findAndFillGaps( self ):
         # if no message is received, we take the chance to do a little cleanup
@@ -278,16 +284,18 @@ class PaxosLeader( object ):
         """Message pump will call this periodically, even if there's no message available"""
         if self.stopped: return
         if message == None:
-            # Only run every 15s otherwise you run the risk of cutting good protocols off in their prime :(            
-            if self.isPrimary and time.time( ) - self.lasttime > 15.0: 
+            # Only run every 15s otherwise you run the risk of cutting good protocols off in their prime :(
+            if self.isPrimary and time.time( ) - self.lasttime > 15.0:
                 self.findAndFillGaps( )
                 self.garbageCollect( )
             return
         if message.command == Message.MSG_HEARTBEAT:
             self.hbListener.newHB( message )
             return True
+        # 客户端发送过来的协议
         if message.command == Message.MSG_EXT_PROPOSE:
             print "External proposal received at", self.port, self.highestInstance
+            # 主leader收到了来自外部的协议，将其值获取
             if self.isPrimary:
                 self.newProposal( message.value )
             # else ignore - we're getting  proposals when we're not the primary
@@ -295,9 +303,9 @@ class PaxosLeader( object ):
             # and giving the address of the new one. However, we might just as well have failed.
             return True
         if self.isPrimary and message.command != Message.MSG_ACCEPTOR_ACCEPT:
-            self.instances[ message.instanceID ].getProtocol(message.proposalID).doTransition( message )        
+            self.instances[ message.instanceID ].getProtocol(message.proposalID).doTransition( message )
         # It's possible that, while we still think we're the primary, we'll get a
-        # accept message that we're only listening in on. 
+        # accept message that we're only listening in on.
         # We are interested in hearing all accepts, so we play along by pretending we've got the protocol
         # that's getting accepted and listening for a quorum as per usual
         if message.command == Message.MSG_ACCEPTOR_ACCEPT:
@@ -319,22 +327,29 @@ class PaxosLeader( object ):
         return True
 
     def newProposal( self, value, instance = None ):
+        # 创建一个PaxosLeaderProtocol
         protocol = PaxosLeaderProtocol( self )
         if instance == None:
             self.highestInstance += 1
+            # 当前的序列号
             instanceID = self.highestInstance
         else:
             instanceID = instance
+        # 计数 + 1
         self.proposalCount += 1
+        # 机器 + 协议计数
         id = (self.port, self.proposalCount )
+        # 记录
         if instanceID in self.instances:
             record = self.instances[ instanceID ]
         else:
             record = InstanceRecord( )
             self.instances[ instanceID ] = record
+        # propose_id 由端口号 + 协议计数
         protocol.propose( value, id, instanceID )
-        record.addProtocol( protocol )        
-            
+        # 添加簿记
+        record.addProtocol( protocol )
+
     def notifyLeader( self, protocol, message ):
         # Protocols call this when they're done
         if protocol.state == PaxosLeaderProtocol.STATE_ACCEPTED:
@@ -351,8 +366,8 @@ class PaxosLeader( object ):
             self.newProposal( message.value )
             return True
         if protocol.state == PaxosLeaderProtocol.STATE_UNACCEPTED:
-            pass            
-        
+            pass
+
 class PaxosLeaderProtocol( object ):
     # State variables
     STATE_UNDEFINED = -1
@@ -361,7 +376,7 @@ class PaxosLeaderProtocol( object ):
     STATE_REJECTED = 2
     STATE_ACCEPTED = 3
     STATE_UNACCEPTED = 4
-    
+
     def __init__( self, leader ):
         self.leader = leader
         self.state = PaxosLeaderProtocol.STATE_UNDEFINED
@@ -378,13 +393,15 @@ class PaxosLeaderProtocol( object ):
         message = Message( Message.MSG_PROPOSE )
         message.proposalID = pID
         message.instanceID = instanceID
-        message.value = value 
+        message.value = value
+        # 通知各个acceptors
         for server in self.leader.getAcceptors( ):
             message.to = server
             self.leader.sendMessage( message )
         self.state = PaxosLeaderProtocol.STATE_PROPOSED
+        # proposalID
         return self.proposalID
-        
+
     def doTransition( self, message ):
         """We run the protocol like a simple state machine. It's not always
         okay to error on unexpected inputs, however, due to message delays, so we silently
@@ -399,7 +416,7 @@ class PaxosLeaderProtocol( object ):
                             self.value = message.value
                             self.highestseen = message.sequence
                     self.state = PaxosLeaderProtocol.STATE_AGREED
-                    # Send 'accept' message to group                    
+                    # Send 'accept' message to group
                     msg = Message( Message.MSG_ACCEPT )
                     msg.copyAsReply( message )
                     msg.value = self.value
@@ -412,7 +429,7 @@ class PaxosLeaderProtocol( object ):
             if message.command == Message.MSG_ACCEPTOR_REJECT:
                 self.rejectcount += 1
                 if self.rejectcount >= self.leader.getQuorumSize( ):
-                    self.state = PaxosLeaderProtocol.STATE_REJECTED                    
+                    self.state = PaxosLeaderProtocol.STATE_REJECTED
                     self.leader.notifyLeader( self, message )
                 return True
         if self.state == PaxosLeaderProtocol.STATE_AGREED:
@@ -426,10 +443,10 @@ class PaxosLeaderProtocol( object ):
                 if self.unacceptcount >= self.leader.getQuorumSize( ):
                     self.state = PaxosLeaderProtocol.STATE_UNACCEPTED
                     self.leader.notifyLeader( self, message )
-        pass    
-    
-class PaxosAcceptor( object ):            
-    def __init__(self, port,leaders ):
+        pass
+
+class PaxosAcceptor( object ):
+    def __init__(self, port, leaders):
         self.port = port
         self.leaders = leaders
         self.instances = {}
@@ -449,17 +466,21 @@ class PaxosAcceptor( object ):
 
     def sendMessage( self, message ):
         self.msgPump.sendMessage( message )
-        
+
     def recvMessage( self, message ):
         if message == None: return
+        # 直接返回
         if self.failed:
             return # Failure means ignored and lost messages
-        if message.command == Message.MSG_PROPOSE: 
+        if message.command == Message.MSG_PROPOSE:
             if message.instanceID not in self.instances:
-                record = InstanceRecord( )                
+                record = InstanceRecord( )
+                # 记录该instanceID
                 self.instances[ message.instanceID ] = record
             protocol = PaxosAcceptorProtocol( self )
+            # 如果accept，那么将会发送消息
             protocol.recvProposal( message )
+            # 记住当前的协议号
             self.instances[ message.instanceID ].addProtocol( protocol )
         else:
             self.instances[ message.instanceID ].getProtocol( message.proposalID ).doTransition( message )
@@ -475,8 +496,8 @@ class PaxosAcceptor( object ):
 
     def getInstanceValue( self, instance ):
         return self.instances[ instance ].value
-            
-    
+
+
 class PaxosAcceptorProtocol( object ):
     # State variables
     STATE_UNDEFINED = -1
@@ -491,20 +512,26 @@ class PaxosAcceptorProtocol( object ):
         self.state = PaxosAcceptorProtocol.STATE_UNDEFINED
 
     def recvProposal( self, message ):
+        # 从leader获取到的消息
         if message.command == Message.MSG_PROPOSE:
             self.proposalID = message.proposalID
             self.instanceID = message.instanceID
             # What's the highest already agreed proposal for this instance?
+            # 获取对该实例Id的最高协议号
             (port, count) = self.client.getHighestAgreedProposal( message.instanceID )
             # Check if this proposal is numbered higher
+            # 小于提交的协议号
             if count < self.proposalID[0] or (count == self.proposalID[0] and port < self.proposalID[1]):
                 # Send agreed message back, with highest accepted value (if it exists)
                 self.state = PaxosAcceptorProtocol.STATE_PROPOSAL_AGREED
-#                print "Agreeing to proposal: ", message.instanceID, message.value
+#               print "Agreeing to proposal: ", message.instanceID, message.value
                 value = self.client.getInstanceValue( message.instanceID )
+                # 消息变成了accept
                 msg = Message( Message.MSG_ACCEPTOR_AGREE )
+                # copy消息
                 msg.copyAsReply( message )
                 msg.value = value
+                # 计数
                 msg.sequence = (port, count)
                 self.client.sendMessage( msg )
             else:
@@ -527,9 +554,9 @@ class PaxosAcceptorProtocol( object ):
             for l in self.client.leaders:
                 msg.to = l
                 self.client.sendMessage( msg )
-            self.notifyClient( message )            
+            self.notifyClient( message )
             return True
-        
+
         raise Exception( "Unexpected state / command combination!" )
 
     def notifyClient( self, message ):
@@ -539,20 +566,24 @@ import time
 if __name__ == '__main__':
     numclients = 5
     clients = [ PaxosAcceptor( port, [54321,54322] ) for port in xrange( 64320, 64320+numclients ) ]
+    # 创建端口号为54321的leader
     leader = PaxosLeader( 54321, [54322], [c.port for c in clients] )
+    # 创建端口号为54322的leader
     leader2 = PaxosLeader( 54322, [54321], [c.port for c in clients] )
     leader.start( )
     leader.setPrimary( True )
     leader2.setPrimary( True )
     leader2.start( )
     for c in clients:
+        # 每个client在等待recieve消息
         c.start( )
 
     clients[0].fail( )
     clients[1].fail( )
 #    clients[2].fail( )
-    
+
     # Send some proposals through to test
+    # 使用udp协议
     s = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
     start = time.time( )
     for i in xrange(1000):
@@ -560,17 +591,18 @@ if __name__ == '__main__':
         m.value = 0 + i
         m.to = 54322
         bytes = pickle.dumps( m )
+        # 发送 给leader 54322
         s.sendto( bytes, ("localhost", m.to) )
 
     while leader2.getNumAccepted( ) < 999:
         print "Sleeping for 1s -- accepted:", leader2.getNumAccepted( )
         time.sleep( 1 )
-    end = time.time( )    
-        
+    end = time.time( )
+
     print "Sleeping for 10s"
     time.sleep( 10 )
     print "Stopping leaders"
-    leader.stop( )    
+    leader.stop( )
     leader2.stop( )
     print "Stopping clients"
     for c in clients:
