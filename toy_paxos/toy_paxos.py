@@ -209,8 +209,10 @@ class PaxosLeader( object ):
             while not self.abort:
                 time.sleep( 1 )
                 if self.leader.isPrimary:
+                    # 发送心跳协议
                     msg = Message( Message.MSG_HEARTBEAT )
                     msg.source = self.leader.port
+                    # 给每个leader发送心跳协议
                     for l in self.leader.leaders:
                         msg.to = l
                         self.leader.sendMessage( msg )
@@ -292,7 +294,7 @@ class PaxosLeader( object ):
         if message.command == Message.MSG_HEARTBEAT:
             self.hbListener.newHB( message )
             return True
-        # 客户端发送过来的协议
+        # 客户端发送过来的协议状态
         if message.command == Message.MSG_EXT_PROPOSE:
             print "External proposal received at", self.port, self.highestInstance
             # 主leader收到了来自外部的协议，将其值获取
@@ -302,8 +304,11 @@ class PaxosLeader( object ):
             # what we should do, if we were being kind, is reply with a message saying 'leader has changed'
             # and giving the address of the new one. However, we might just as well have failed.
             return True
+
+        # 如果是acceptor发送过来的Agree消息，那么就会在这个分支处理
         if self.isPrimary and message.command != Message.MSG_ACCEPTOR_ACCEPT:
             self.instances[ message.instanceID ].getProtocol(message.proposalID).doTransition( message )
+
         # It's possible that, while we still think we're the primary, we'll get a
         # accept message that we're only listening in on.
         # We are interested in hearing all accepts, so we play along by pretending we've got the protocol
@@ -331,7 +336,7 @@ class PaxosLeader( object ):
         protocol = PaxosLeaderProtocol( self )
         if instance == None:
             self.highestInstance += 1
-            # 当前的序列号
+            # 可以理解成客户端端的实例
             instanceID = self.highestInstance
         else:
             instanceID = instance
@@ -358,6 +363,8 @@ class PaxosLeader( object ):
            self.instances[ message.instanceID ].value = message.value
            self.highestInstance = max( message.instanceID, self.highestInstance )
            return
+        # 如果是被Acceptor regject，那么
+        # 选择最大的协议号, 发起新的prososal
         if protocol.state == PaxosLeaderProtocol.STATE_REJECTED:
             # Look at the message to find the value, and then retry
             # Eventually, assuming that the acceptors will accept some value for
@@ -406,21 +413,29 @@ class PaxosLeaderProtocol( object ):
         """We run the protocol like a simple state machine. It's not always
         okay to error on unexpected inputs, however, due to message delays, so we silently
         ignore inputs that we're not expecting."""
+        # 如果在leader这个节点这个消息是proposed
         if self.state == PaxosLeaderProtocol.STATE_PROPOSED:
+            # accpeptor 对应发过来的协议号是agree
             if message.command == Message.MSG_ACCEPTOR_AGREE:
+                # 同意数 + 1
                 self.agreecount += 1
+                # 大于一半
                 if self.agreecount >= self.leader.getQuorumSize( ):
 #                    print "Achieved agreement quorum, last value replied was:", message.value
+                    # 取最大协议号的value
                     if message.value != None: # If it's none, can do what we like. Otherwise we have to take the highest seen proposal
                         if message.sequence[0] > self.highestseen[0] or (message.sequence[0] == self.highestseen[0] and message.sequence[1] > self.highestseen[1]):
                             self.value = message.value
                             self.highestseen = message.sequence
+                    # 将该条消息设置为AGREE
                     self.state = PaxosLeaderProtocol.STATE_AGREED
                     # Send 'accept' message to group
                     msg = Message( Message.MSG_ACCEPT )
                     msg.copyAsReply( message )
                     msg.value = self.value
                     msg.leaderID = msg.to
+
+                    # 同步该消息到各个acceptors
                     for s in self.leader.getAcceptors( ):
                         msg.to = s
                         self.leader.sendMessage( msg )
@@ -430,18 +445,23 @@ class PaxosLeaderProtocol( object ):
                 self.rejectcount += 1
                 if self.rejectcount >= self.leader.getQuorumSize( ):
                     self.state = PaxosLeaderProtocol.STATE_REJECTED
+                    # reject会通知到leader
                     self.leader.notifyLeader( self, message )
                 return True
+        # 如果本身是Agreed
         if self.state == PaxosLeaderProtocol.STATE_AGREED:
             if message.command == Message.MSG_ACCEPTOR_ACCEPT:
+                # 统计accped_count
                 self.acceptcount += 1
                 if self.acceptcount >= self.leader.getQuorumSize( ):
                     self.state = PaxosLeaderProtocol.STATE_ACCEPTED
+                    # 通知leader将消息记录
                     self.leader.notifyLeader( self, message )
             if message.command == Message.MSG_ACCEPTOR_UNACCEPT:
                 self.unacceptcount += 1
                 if self.unacceptcount >= self.leader.getQuorumSize( ):
                     self.state = PaxosLeaderProtocol.STATE_UNACCEPTED
+                    # leader记录当前
                     self.leader.notifyLeader( self, message )
         pass
 
@@ -526,7 +546,7 @@ class PaxosAcceptorProtocol( object ):
                 self.state = PaxosAcceptorProtocol.STATE_PROPOSAL_AGREED
 #               print "Agreeing to proposal: ", message.instanceID, message.value
                 value = self.client.getInstanceValue( message.instanceID )
-                # 消息变成了accept
+                # 消息状态变成了ACCEPTOR_AGREE
                 msg = Message( Message.MSG_ACCEPTOR_AGREE )
                 # copy消息
                 msg.copyAsReply( message )
@@ -546,19 +566,24 @@ class PaxosAcceptorProtocol( object ):
 
     def doTransition( self, message ):
         if self.state == PaxosAcceptorProtocol.STATE_PROPOSAL_AGREED and message.command == Message.MSG_ACCEPT:
+            # 改变Acceptor这边协议的状态
             self.state = PaxosAcceptorProtocol.STATE_PROPOSAL_ACCEPTED
             # Could check on the value here, if we don't trust leaders to honour what we tell them
             # send reply to leader acknowledging
             msg = Message( Message.MSG_ACCEPTOR_ACCEPT )
             msg.copyAsReply( message )
+            # 发送给leaders
             for l in self.client.leaders:
                 msg.to = l
+                # 通过acceptor发送给Leader
                 self.client.sendMessage( msg )
+            # 通知acceptor保存当前的副本
             self.notifyClient( message )
             return True
 
         raise Exception( "Unexpected state / command combination!" )
 
+    # 通知acceptor保存当前的副本
     def notifyClient( self, message ):
         self.client.notifyClient( self, message )
 
