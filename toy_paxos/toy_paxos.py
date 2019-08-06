@@ -302,6 +302,7 @@ class PaxosLeader( object ):
             # what we should do, if we were being kind, is reply with a message saying 'leader has changed'
             # and giving the address of the new one. However, we might just as well have failed.
             return True
+        # 单个节点同意后会进入这个分支
         if self.isPrimary and message.command != Message.MSG_ACCEPTOR_ACCEPT:
             self.instances[ message.instanceID ].getProtocol(message.proposalID).doTransition( message )
         # It's possible that, while we still think we're the primary, we'll get a
