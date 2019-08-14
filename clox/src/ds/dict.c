@@ -109,6 +109,7 @@ static KeyValuePair* dict_get_bucket(Dictionary* dict, const char* key)
     return NULL;
 }
 
+// 获取key对应的字典值
 void* dict_get(Dictionary* dict, const char* key)
 {
     KeyValuePair* bucket = dict_get_bucket(dict, key);
