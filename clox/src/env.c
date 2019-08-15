@@ -82,6 +82,7 @@ static Object* env_read()
     return obj_new(OBJ_CALLABLE, callableRead, sizeof(Callable));
 }
 
+// 初始化运行环境
 void env_init_global()
 {
     ExecutionEnvironment* env = &GlobalExecutionEnvironment;
@@ -90,7 +91,9 @@ void env_init_global()
             env->variables = dict(env_clear_values);
         }
     }
+    // 添加两个环境变量
     env_add_variable(env, "clock", env_clock());
+    // 添加两个环境变量
     env_add_variable(env, "read", env_read());
 }
 
@@ -172,6 +175,7 @@ int env_set_variable_value_at(ExecutionEnvironment* env, unsigned int order, con
     return 1;
 }
 
+// 用来删除键的回调函数
 static int env_clear_values(KeyValuePair* pair)
 {
     return obj_force_destroy(pair);

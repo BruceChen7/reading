@@ -23,6 +23,7 @@ typedef enum {
     MODE_VM
 } Mode;
 
+// 函数指针的集合
 typedef struct runnable_mode {
     Mode mode;
     void (*codeRunner)(const char* code);
@@ -41,13 +42,16 @@ void vm_chunk_test();
 
 ArgValues argparse(int argc, const char* argv[])
 {
+    // 命令行参数
     ArgValues values;
     memset(&values, 0, sizeof(struct argvalues));
+    // 默认采用VM方式
     values.treewalk = 0;
     if (argc > 3) {
         values.error = 1;
     } else if (argc == 3) {
         values.repl = 0;
+        // 3个命令行参数，最后输入的是文件名
         values.filename = (char*)argv[2];
         if (strncmp(argv[1], "--tree-walk", 12) == 0) {
             values.treewalk = 1;
@@ -84,6 +88,7 @@ int main(int argc, const char* argv[])
 #else
     char separator = '/';
 #endif
+    // 找到最后一个分割符号
     char* name = strrchr(argv[0], separator);
     char* line = NULL;
     char* buf = NULL;
@@ -103,6 +108,7 @@ int main(int argc, const char* argv[])
 
     header(name);
     mode.mode = values.treewalk ? MODE_TREEWALK : MODE_VM;
+    // repl模式
     if (values.repl) {
         mode.codeRunner = values.treewalk ? run_treewalk_chunk : run_vm_chunk;
 
@@ -162,6 +168,7 @@ char* read_file(const char* filepath)
 {
     size_t readBytes = 0, length = 0;
     char* buf = NULL;
+    // 以二进制的协议的方式来读取整个文件
     FILE* fp = fopen(filepath, "rb");
 
     if (fp == NULL) {
@@ -203,10 +210,12 @@ char* read_line(const char* prompt)
     memset((void*)line, 0, size);
     printf("%s", prompt);
     fflush(stdin);
+    // 重标准输入中读取一行
     fgets(line, size, stdin);
     return line;
 }
 
+// 采用树的结构来跑代码
 void run_treewalk_chunk(const char* code)
 {
     interp(code);
@@ -215,6 +224,7 @@ void run_treewalk_chunk(const char* code)
 void run_treewalk_file(const char* code)
 {
     env_init_global();
+    // 遍历tree
     run_treewalk_chunk(code);
     env_destroy(&GlobalExecutionEnvironment);
 }

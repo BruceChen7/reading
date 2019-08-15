@@ -156,6 +156,7 @@ typedef struct stmt_class_t {
 } ClassStmt;
 
 typedef struct parser_t {
+    // statements列表
     List* stmts;
     Expr* expr;
 } ParsingContext;

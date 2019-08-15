@@ -102,18 +102,22 @@ static char* read_other(const char* code, size_t codeLength, int* current)
 
 Tokenization toknzr(const char* code, int verbose)
 {
+    // 词法分析
     char* literal = NULL;
     Token* tokn = NULL;
     TokenType type = TOKEN_ENDOFFILE;
     size_t length = strlen(code);
     int current = 0, start = 0, line = 1;
     Tokenization toknz;
+    // 创建token list
     toknz.values = list();
+    //
     toknz.lines = 0;
     while (!IS_AT_END(current, length)) {
         char c = code[current];
         switch (c) {
         case '(':
+            // 生成一个token(
             tokn = token_simple(TOKEN_LEFT_PAREN, line, current, (char*)"(");
             break;
         case ')':
@@ -156,12 +160,15 @@ Tokenization toknzr(const char* code, int verbose)
             tokn = token_simple(type, line, current, (char*)">");
             break;
         case '<':
+            // match_next 在匹配成功时，会将current + 1
             type = match_next(code, '=', length, &current) ? TOKEN_LESS_EQUAL : TOKEN_LESS;
             tokn = token_simple(type, line, current, (char*)"<");
             break;
         case '/':
+            // // 表示注释
             type = match_next(code, '/', length, &current) ? TOKEN_ENDOFFILE : TOKEN_SLASH;
             if (type == TOKEN_ENDOFFILE) {
+                // 如果是注释那么skip这一行
                 do {
                     current++;
                 } while (current != length && code[current] != '\n');
@@ -177,15 +184,20 @@ Tokenization toknzr(const char* code, int verbose)
                 }
                 current++;
             } while (code[current] != '"' && !IS_AT_END(current, length));
+
+            // 如果到了末尾
             if (IS_AT_END(current, length)) {
                 if (verbose) {
                     toknzr_error(line, current, code[current]);
                 } else {
+                    // 字符串解析
                     tokn = token_simple(TOKEN_ERROR, line, current, "Unterminated string.");
                 }
             } else {
+                // 字符串常量
                 literal = (char*)alloc(current - start);
                 memcpy(literal, &(code[start + 1]), current - start);
+                // 设置\0结尾
                 literal[current - start - 1] = 0;
                 if (literal != NULL) {
                     tokn = token(TOKEN_STRING, literal, line, current, literal);
@@ -201,6 +213,7 @@ Tokenization toknzr(const char* code, int verbose)
             break;
         default:
             if (isdigit(c)) {
+                // 支持浮点数
                 literal = read_number(code, length, &current);
                 tokn = token(TOKEN_NUMBER, literal, line, current, literal);
             } else if (isalpha(c)) {
@@ -258,6 +271,7 @@ Tokenization toknzr(const char* code, int verbose)
         }
     }
     toknz.lines = line;
+    // 最后一个EOF结尾
     list_push(toknz.values, token_simple(TOKEN_ENDOFFILE, line, current, (char*)"EOF"));
     return toknz;
 }
