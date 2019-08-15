@@ -43,8 +43,11 @@ static int match(TokenType type, TokenType types[], int n, Node** node)
     return 0;
 }
 
+// consume将移动到下一个节点，然后返回符合当前匹配的节点
+// 否则直接报错
 static Node** consume(Node** node, TokenType type, const char* msg)
 {
+    // 获取响应
     Token* tkn = (Token*)(*node)->data;
     if (MATCH(tkn->type, type)) {
         (*node) = (*node)->next;
@@ -123,6 +126,7 @@ static Expr* binary_production(Node** node, Expr* (*rule)(Node** t), TokenType m
     return expr;
 }
 
+// true表达式
 LiteralExpr* new_true()
 {
     char* value = (char*)alloc(sizeof(char));
@@ -142,6 +146,7 @@ LiteralExpr* new_nil()
     return new_literal(NULL, LITERAL_NIL, 0);
 }
 
+// primary -> "true" | "false" | "nil" | number | string | (expresion)
 static Expr* primary(Node** node)
 {
     Expr* groupedExpr = NULL;
@@ -151,6 +156,7 @@ static Expr* primary(Node** node)
     ThisExpr* this = NULL;
     SuperExpr* super = NULL;
 
+    // 如果是叶子节点，直接返回创建叶子节点
     if (MATCH(tkn->type, TOKEN_TRUE)) {
         (*node) = (*node)->next;
         return new_expr(EXPR_LITERAL, (void*)new_true());
@@ -161,23 +167,28 @@ static Expr* primary(Node** node)
         return new_expr(EXPR_LITERAL, (void*)new_false());
     }
 
+    // 空值
     if (MATCH(tkn->type, TOKEN_NIL)) {
         (*node) = (*node)->next;
         return new_expr(EXPR_LITERAL, (void*)new_nil());
     }
 
+    // 字符串
     if (MATCH(tkn->type, TOKEN_STRING)) {
         (*node) = (*node)->next;
         return new_expr(EXPR_LITERAL, new_literal(tkn->literal, LITERAL_STRING, strlen(tkn->literal) + 1));
     }
 
+    // 数量
     if (MATCH(tkn->type, TOKEN_NUMBER)) {
+        // 移动到下一个节点
         (*node) = (*node)->next;
         doubleLiteral = (double*)alloc(sizeof(double));
         *doubleLiteral = atof(tkn->literal);
         return new_expr(EXPR_LITERAL, new_literal(doubleLiteral, LITERAL_NUMBER, sizeof(double)));
     }
 
+    // 直接(
     if (MATCH(tkn->type, TOKEN_LEFT_PAREN)) {
         *node = (*node)->next;
         groupedExpr = expression(node);
@@ -188,6 +199,7 @@ static Expr* primary(Node** node)
         return new_expr(EXPR_GROUPING, (void*)new_grouping(groupedExpr));
     }
 
+    // super
     if (MATCH(tkn->type, TOKEN_SUPER)) {
         super = (SuperExpr*)alloc(sizeof(SuperExpr));
         super->keyword = *(Token*)(*node)->prev->data;
@@ -204,12 +216,14 @@ static Expr* primary(Node** node)
         return new_expr(EXPR_SUPER, super);
     }
 
+    // this
     if (MATCH(tkn->type, TOKEN_THIS)) {
         this = (ThisExpr*)alloc(sizeof(ThisExpr));
         this->keyword = *(Token*)(*node)->prev->data;
         return new_expr(EXPR_THIS, this);
     }
 
+    // 
     if (MATCH(tkn->type, TOKEN_IDENTIFIER)) {
         *node = (*node)->next;
         return new_expr(EXPR_VARIABLE, new_variable(*(Token*)(*node)->prev->data));
@@ -538,6 +552,7 @@ static Stmt* statement(Node** node)
 static Stmt* class_statement(Node** node)
 {
     ClassStmt* stmt = NULL;
+    // classNameNode
     Node** classNameNode = consume(node, TOKEN_IDENTIFIER, "Expect class name");
     Token *name = NULL, *temp = NULL;
     List* methods = NULL;
@@ -549,8 +564,11 @@ static Stmt* class_statement(Node** node)
     }
     name = (Token*)(*classNameNode)->data;
     temp = (Token*)(*node)->data;
+
+    // 匹配到 < 
     if (MATCH(temp->type, TOKEN_LESS)) {
         (*node) = (*node)->next;
+
         if (consume(node, TOKEN_IDENTIFIER, "Expect super class") == NULL) {
             return NULL;
         }
@@ -558,6 +576,7 @@ static Stmt* class_statement(Node** node)
         superClass->variableName = *((Token*)(*node)->prev->data);
         superClassExpr = new_expr(EXPR_VARIABLE, superClass);
     }
+
     consume(node, TOKEN_LEFT_BRACE, "Expect '{' before class body");
     temp = (Token*)(*node)->data;
     methods = list();
@@ -575,10 +594,12 @@ static Stmt* class_statement(Node** node)
 
 static Stmt* declaration(Node** node)
 {
+    // 采用LL来解析statement
     const Token* tkn = (Token*)((*node)->data);
     Stmt* stmt = NULL;
-    // 第一个
+    // 如果是以class开头
     if (MATCH(tkn->type, TOKEN_CLASS)) {
+        // 直接解析下个节点
         (*node) = (*node)->next;
         return class_statement(node);
     } else if (MATCH(tkn->type, TOKEN_FUN)) {
@@ -934,6 +955,7 @@ ParsingContext parse(Tokenization toknz)
         head = tokens->head;
 
         while (!END_OF_TOKENS(((Token*)head->data)->type)) {
+            // 可以
             stmt = declaration(&head);
             if (stmt != NULL) {
                 list_push(stmts, stmt);
