@@ -50,6 +50,7 @@ typedef enum tokentype {
 } TokenType;
 
 typedef struct tokenization {
+    // a list of tokens
     List* values;
     int lines;
 } Tokenization;

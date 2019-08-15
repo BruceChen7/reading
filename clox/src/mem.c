@@ -11,6 +11,7 @@ void* alloc(size_t size)
     return mem;
 }
 
+// 内存管理，用来删除整个内存
 void fr(void* mem)
 {
     free(mem);

@@ -577,6 +577,7 @@ static Stmt* declaration(Node** node)
 {
     const Token* tkn = (Token*)((*node)->data);
     Stmt* stmt = NULL;
+    // 第一个
     if (MATCH(tkn->type, TOKEN_CLASS)) {
         (*node) = (*node)->next;
         return class_statement(node);

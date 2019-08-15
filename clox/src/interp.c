@@ -12,8 +12,10 @@ void for_stmts(List* stmts, void* stmtObj)
     }
 }
 
+// 解释代码
 void interp(const char* code)
 {
+    // Scanner扫描代码
     Tokenization toknz = toknzr(code, 1);
     ParsingContext ctx = parse(toknz);
     if (ctx.stmts != NULL) {
