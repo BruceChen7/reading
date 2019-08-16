@@ -993,6 +993,7 @@ static void func_declaration()
     variable_define(global);
 }
 
+// Declaration -> var declaration | func declaration  | statement
 static void declaration()
 {
     if (match(TOKEN_VAR)) {

@@ -41,6 +41,7 @@ static void instance_set(ClassInstance* instance, Token name, Object* value);
 static Object* lookup_var(int order, char* name);
 static void callable_bind(Object* instanceObj, Callable* method);
 
+// 实例化计算各个非终结符的节点
 ExpressionVisitor EvaluateExpressionVisitor = {
     visit_binary,
     visit_unary,
@@ -56,6 +57,7 @@ ExpressionVisitor EvaluateExpressionVisitor = {
     visit_super
 };
 
+// 实例化计算各个statement节点
 StmtVisitor EvaluateStmtVisitor = {
     visit_print,
     visit_var,
@@ -90,6 +92,13 @@ static Object* new_bool(int truthy)
     return obj_new(OBJ_BOOL, value, 1);
 }
 
+static Object* new_string(const char* str) {
+    int str_len = strlen(str);
+    char* value = (char *)alloc(str_len + 1);
+    memcpy(value, str, str_len + 1);
+    return obj_new(OBJ_STRING, value, str_len + 1);
+}
+
 static Object* eval_expr(Expr* expr)
 {
     return (Object*)accept_expr(EvaluateExpressionVisitor, expr);
@@ -122,10 +131,13 @@ Object* runtime_error(const char* format, Object** obj, int line, ...)
     return *obj;
 }
 
+// 这个是计算的visitor
 void* visit_binary(Expr* expr)
 {
     const BinaryExpr* bexpr = (BinaryExpr*)(expr->expr);
+    // 计算左表达式的值
     Object* rObject = eval_expr(bexpr->rightExpr);
+    // 右表达式的的值
     Object* lObject = eval_expr(bexpr->leftExpr);
     Object* result = NULL;
     double *lvalue = NULL, *rvalue = NULL;
@@ -144,36 +156,37 @@ void* visit_binary(Expr* expr)
             runtime_error(OPERAND_NUMBER, &result, bexpr->op.line);
         }
         break;
-    case TOKEN_PLUS:
+    case TOKEN_PLUS:  // +
         if (rObject->type == OBJ_NUMBER && lObject->type == OBJ_NUMBER) {
             result = new_number(*((double*)lObject->value) + *((double*)rObject->value));
         } else if (rObject->type == OBJ_STRING && lObject->type == OBJ_STRING) {
             valueLengthLeft = strlen((char*)lObject->value);
             valueLengthRight = strlen((char*)rObject->value);
-            result->type = OBJ_STRING;
             svalue = (char*)alloc(valueLengthLeft + valueLengthRight + 1);
             memcpy(svalue, lObject->value, valueLengthLeft);
             memcpy(svalue + valueLengthLeft, rObject->value, valueLengthRight + 1);
+            result = new_string(svalue);
+            result->type = OBJ_STRING;
             result->value = svalue;
         } else {
             runtime_error(OPERAND_SAMETYPE, &result, bexpr->op.line);
         }
         break;
-    case TOKEN_SLASH:
+    case TOKEN_SLASH: // -
         if (rObject->type == OBJ_NUMBER && lObject->type == OBJ_NUMBER) {
             result = new_number(*((double*)lObject->value) / *((double*)rObject->value));
         } else {
             runtime_error(OPERAND_NUMBER, &result, bexpr->op.line);
         }
         break;
-    case TOKEN_STAR:
+    case TOKEN_STAR: // *
         if (rObject->type == OBJ_NUMBER && lObject->type == OBJ_NUMBER) {
             result = new_number(*((double*)lObject->value) * *((double*)rObject->value));
         } else {
             runtime_error(OPERAND_NUMBER, &result, bexpr->op.line);
         }
         break;
-    case TOKEN_GREATER:
+    case TOKEN_GREATER: // >
         if (rObject->type == OBJ_NUMBER && lObject->type == OBJ_NUMBER) {
             lvalue = (double*)lObject->value;
             rvalue = (double*)rObject->value;
@@ -182,7 +195,7 @@ void* visit_binary(Expr* expr)
             runtime_error(OPERAND_NUMBER, &result, bexpr->op.line);
         }
         break;
-    case TOKEN_GREATER_EQUAL:
+    case TOKEN_GREATER_EQUAL: // >=
         if (rObject->type == OBJ_NUMBER && lObject->type == OBJ_NUMBER) {
             lvalue = (double*)lObject->value;
             rvalue = (double*)rObject->value;
@@ -191,7 +204,7 @@ void* visit_binary(Expr* expr)
             runtime_error(OPERAND_NUMBER, &result, bexpr->op.line);
         }
         break;
-    case TOKEN_LESS:
+    case TOKEN_LESS:  // <
         if (rObject->type == OBJ_NUMBER && lObject->type == OBJ_NUMBER) {
             lvalue = (double*)lObject->value;
             rvalue = (double*)rObject->value;
@@ -200,7 +213,7 @@ void* visit_binary(Expr* expr)
             runtime_error(OPERAND_NUMBER, &result, bexpr->op.line);
         }
         break;
-    case TOKEN_LESS_EQUAL:
+    case TOKEN_LESS_EQUAL: // <=
         if (rObject->type == OBJ_NUMBER && lObject->type == OBJ_NUMBER) {
             lvalue = (double*)lObject->value;
             rvalue = (double*)rObject->value;
@@ -209,7 +222,7 @@ void* visit_binary(Expr* expr)
             runtime_error(OPERAND_NUMBER, &result, bexpr->op.line);
         }
         break;
-    case TOKEN_EQUAL_EQUAL:
+    case TOKEN_EQUAL_EQUAL: // ==
         if (rObject->type == OBJ_NIL && lObject->type == OBJ_NIL) {
             result->value = new_bool(1);
         } else if (rObject->type == OBJ_NUMBER && lObject->type == OBJ_NUMBER) {
@@ -224,7 +237,7 @@ void* visit_binary(Expr* expr)
             result = new_bool(0);
         }
         break;
-    case TOKEN_BANG_EQUAL:
+    case TOKEN_BANG_EQUAL: // !=
         if (rObject->type == OBJ_NIL && lObject->type == OBJ_NIL) {
             result = new_bool(0);
         } else if (rObject->type == OBJ_NUMBER && lObject->type == OBJ_NUMBER) {

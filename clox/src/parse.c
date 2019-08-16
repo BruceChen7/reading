@@ -50,7 +50,9 @@ static Node** consume(Node** node, TokenType type, const char* msg)
     // 获取响应
     Token* tkn = (Token*)(*node)->data;
     if (MATCH(tkn->type, type)) {
+        // 移动到下一个节点
         (*node) = (*node)->next;
+        // 放回当前节点
         return &(*node)->prev;
     }
     parse_error(tkn, msg);
@@ -114,6 +116,7 @@ static AssignmentExpr* new_assignment(Token variableName, Expr* rightExpr)
     return expr;
 }
 
+// Binary Expression  -> Expression (MatchToken  Expression)?
 static Expr* binary_production(Node** node, Expr* (*rule)(Node** t), TokenType matchTokens[], int n)
 {
     Expr *expr = rule(node), *exprRight = NULL;
@@ -347,17 +350,22 @@ static Expr* comparison(Node** node)
     return binary_production(node, addition, comparisonTokens, 4);
 }
 
+// EqualityExpression -> BinaryExpr
 static Expr* equality(Node** node)
 {
     TokenType equalityTokens[] = {
+        // !=
         TOKEN_BANG_EQUAL,
+        // ==
         TOKEN_EQUAL_EQUAL
     };
     return binary_production(node, comparison, equalityTokens, 2);
 }
 
+// Assignment -> OrExpression ("=" Assignment)?
 static Expr* assignment(Node** node)
 {
+    // 先计算逻辑或的表达式
     Expr *expr = logicOr(node), *value = NULL;
     Node* equals = *node;
     GetExpr* get = NULL;
@@ -365,6 +373,7 @@ static Expr* assignment(Node** node)
 
     if (MATCH(((Token*)equals->data)->type, TOKEN_EQUAL)) {
         (*node) = (*node)->next;
+        // assignment
         value = assignment(node);
         if (expr != NULL && expr->type == EXPR_VARIABLE) {
             return new_expr(EXPR_ASSIGNMENT, new_assignment(((VariableExpr*)expr->expr)->variableName, value));
@@ -394,6 +403,7 @@ static Expr* new_logical(Expr* left, Token op, Expr* right)
     return new_expr(EXPR_LOGICAL, logicalExpr);
 }
 
+// OrExpression -> AndExpression  ("||" AndExpression)*
 static Expr* logicOr(Node** node)
 {
     Expr *expr = logicAnd(node), *right = NULL;
@@ -410,6 +420,7 @@ static Expr* logicOr(Node** node)
     return expr;
 }
 
+// AndExpression -> EqualityExpression ( " && "  EqualityExpression)?
 static Expr* logicAnd(Node** node)
 {
     Expr *expr = equality(node), *right = NULL;
@@ -425,6 +436,7 @@ static Expr* logicAnd(Node** node)
     return expr;
 }
 
+// Expression -> assignment
 static Expr* expression(Node** node)
 {
     return assignment(node);
@@ -437,7 +449,9 @@ static void synchronize(Node** node)
     if (*node != NULL) {
         token = (Token*)(*node)->data;
         while (!END_OF_TOKENS(token->type)) {
+            // 获取上一个token
             prevToken = (Token*)(*node)->prev->data;
+            // 如果是;，那么是空语句直接结束
             if (prevToken->type == TOKEN_SEMICOLON)
                 return;
 
@@ -450,6 +464,7 @@ static void synchronize(Node** node)
             case TOKEN_WHILE:
             case TOKEN_PRINT:
             case TOKEN_RETURN:
+                // 这里也是直接返回
                 return;
             }
             (*node) = (*node)->next;
@@ -504,8 +519,11 @@ static Stmt* var_statement(Node** node, Expr* initializer, Token variableName)
     return new_terminated_statement(node, STMT_VAR_DECLARATION, stmt);
 }
 
+// Var -> Identifier (= Expression)?
 static Stmt* var_declaration(Node** node)
 {
+    // identifierNode 是当前节点，
+    // 而且node此时执行的是下一个节点
     Node** identifierNode = consume(node, TOKEN_IDENTIFIER, "Expected a EXPR_VARIABLE name");
     Token* name = NULL;
     Expr* initializer = NULL;
@@ -513,6 +531,7 @@ static Stmt* var_declaration(Node** node)
     if (identifierNode == NULL) {
         return NULL;
     }
+    // 变量名
     name = (Token*)(*identifierNode)->data;
 
     if (MATCH(((Token*)(*node)->data)->type, TOKEN_EQUAL)) {
@@ -592,6 +611,7 @@ static Stmt* class_statement(Node** node)
     return new_statement(STMT_CLASS, stmt);
 }
 
+// declaration -> "class" statment | "func " statement | var statement | statement
 static Stmt* declaration(Node** node)
 {
     // 采用LL来解析statement
@@ -606,11 +626,14 @@ static Stmt* declaration(Node** node)
         (*node) = (*node)->next;
         return fun_statement("function", node);
     } else if (MATCH(tkn->type, TOKEN_VAR)) {
+        // 这里都要移动到下一个节点
         (*node) = (*node)->next;
+        // var breakfast = "beignets"这种;
         stmt = var_declaration(node);
     } else {
         stmt = statement(node);
     }
+    // 如果是失败
     if (stmt == NULL) {
         synchronize(node);
     }
@@ -951,11 +974,13 @@ ParsingContext parse(Tokenization toknz)
 
     if (tokens != NULL) {
         stmts = list();
+        // 这里看其实没有什么用
         nbTokens = tokens->count;
+        // 获取head node
         head = tokens->head;
 
         while (!END_OF_TOKENS(((Token*)head->data)->type)) {
-            // 可以
+            // 直接从declarition开始解析
             stmt = declaration(&head);
             if (stmt != NULL) {
                 list_push(stmts, stmt);

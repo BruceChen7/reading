@@ -4,8 +4,11 @@
 #include <stdio.h>
 
 typedef enum expr_type_t {
+    // xx + xx
     EXPR_BINARY = 1,
+    // ()这种表达式
     EXPR_GROUPING,
+    // !a这种
     EXPR_UNARY,
     EXPR_LITERAL,
     EXPR_VARIABLE,
