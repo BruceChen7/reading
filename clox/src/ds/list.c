@@ -27,6 +27,7 @@ Node* list_push(List* list, void* data)
     if (list == NULL) {
         return NULL;
     }
+    // 获取最后一个节点
     last = list_last(list);
     if (last != NULL) {
         last->next = newNode;

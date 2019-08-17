@@ -1,6 +1,7 @@
 #ifndef LIST_H
 #define LIST_H
 
+// 链表节点
 typedef struct node {
     void* data;
     struct node* next;

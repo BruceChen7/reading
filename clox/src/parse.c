@@ -950,12 +950,13 @@ ParsingContext parse(Tokenization toknz)
     Stmt* stmt = NULL;
 
     if (tokens != NULL) {
+        // list of statements
         stmts = list();
         nbTokens = tokens->count;
         head = tokens->head;
 
         while (!END_OF_TOKENS(((Token*)head->data)->type)) {
-            // 可以
+            // 从declaration开始解析
             stmt = declaration(&head);
             if (stmt != NULL) {
                 list_push(stmts, stmt);
