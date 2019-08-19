@@ -1,8 +1,10 @@
 #include "visitor.h"
 #include <stdio.h>
 
+// C的实现Visitor模式
 void* accept_expr(ExpressionVisitor visitor, Expr* expr)
 {
+    // 根据类型来做不同行为
     switch (expr->type) {
     case EXPR_LITERAL:
         return visitor.visitLiteral(expr);

@@ -6,6 +6,7 @@ typedef void* (*ActionExpr)(Expr*);
 typedef void* (*ActionStmt)(Stmt* stmt);
 
 typedef struct expression_visitor_t {
+    // 一系列的接口，也就是一系列的列
     ActionExpr visitBinary;
     ActionExpr visitUnary;
     ActionExpr visitLiteral;
