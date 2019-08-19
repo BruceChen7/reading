@@ -87,6 +87,7 @@ struct m_ext {
 };
 
 struct mbuf {
+    // 总长20个字节
 	struct	m_hdr m_hdr;
 	union {
 		struct {
@@ -96,6 +97,7 @@ struct mbuf {
 				char	MH_databuf[MHLEN];
 			} MH_dat;
 		} MH;
+        // MLEN 为128个字节
 		char	M_databuf[MLEN];		/* !M_PKTHDR, !M_EXT */
 	} M_dat;
 };

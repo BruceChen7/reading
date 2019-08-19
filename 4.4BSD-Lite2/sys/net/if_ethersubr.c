@@ -492,9 +492,9 @@ ether_ifattach(ifp)
 	register struct sockaddr_dl *sdl;
 
 	ifp->if_type = IFT_ETHER;
-	ifp->if_addrlen = 6;
-	ifp->if_hdrlen = 14;
-	ifp->if_mtu = ETHERMTU;
+	ifp->if_addrlen = 6; // 链路层的地址为6个字节
+	ifp->if_hdrlen = 14; // 整个以太网的首部是14个字节
+	ifp->if_mtu = ETHERMTU;  // MTU为1500个字节
 	for (ifa = ifp->if_addrlist; ifa; ifa = ifa->ifa_next)
 		if ((sdl = (struct sockaddr_dl *)ifa->ifa_addr) &&
 		    sdl->sdl_family == AF_LINK) {

@@ -126,6 +126,7 @@ typedef int (*cfprint_t) __P((void *, char *));
 /*
  * Pseudo-device attach information (function + number of pseudo-devs).
  */
+// 就是完全由软件实现的设备, LO设备
 struct pdevinit {
 	void	(*pdev_attach) __P((int));
 	int	pdev_count;

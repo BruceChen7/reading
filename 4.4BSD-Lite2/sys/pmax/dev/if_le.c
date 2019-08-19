@@ -114,9 +114,11 @@ int	ledebug = 0;		/* console error messages */
  * This structure contains the output queue for the interface, its address, ...
  */
 struct	le_softc {
+    // 公有的以太网结构
 	struct	arpcom sc_ac;	/* common Ethernet structures */
 #define	sc_if	sc_ac.ac_if	/* network-visible interface */
 #define	sc_addr	sc_ac.ac_enaddr	/* hardware Ethernet address */
+    // 设备专用成员
 	volatile struct	lereg1 *sc_r1;	/* LANCE registers */
 	volatile void *sc_r2;	/* dual-port RAM */
 	int	sc_ler2pad;	/* Do ring descriptors require short pads? */

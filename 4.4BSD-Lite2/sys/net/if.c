@@ -65,7 +65,9 @@ ifinit()
 
 	for (ifp = ifnet; ifp; ifp = ifp->if_next)
 		if (ifp->if_snd.ifq_maxlen == 0)
+            // 设置输出队列的packet为50
 			ifp->if_snd.ifq_maxlen = ifqmaxlen;
+    // 启动接口的监视计时器。
 	if_slowtimo(0);
 }
 
@@ -106,15 +108,21 @@ if_attach(ifp)
 	static int if_indexlim = 8;
 	extern void link_rtrequest();
 
+    // 指向ifnet的最后一个
 	while (*p)
 		p = &((*p)->if_next);
 	*p = ifp;
+    // 设置当前接口的索引号
 	ifp->if_index = ++if_index;
+
 	if (ifnet_addrs == 0 || if_index >= if_indexlim) {
+        // 扩大两倍
 		unsigned n = (if_indexlim <<= 1) * sizeof(ifa);
+        // 创建新的ifaddr结构体I
 		struct ifaddr **q = (struct ifaddr **)
 					malloc(n, M_IFADDR, M_WAITOK);
 		if (ifnet_addrs) {
+            // 拷贝原来的
 			bcopy((caddr_t)ifnet_addrs, (caddr_t)q, n/2);
 			free((caddr_t)ifnet_addrs, M_IFADDR);
 		}
@@ -122,11 +130,14 @@ if_attach(ifp)
 	}
 	/*
 	 * create a Link Level name for this device
+     * 创建链路层的名字
 	 */
+    // 组装接口名称
 	unitname = sprint_d((u_int)ifp->if_unit, workbuf, sizeof(workbuf));
 	namelen = strlen(ifp->if_name);
 	unitlen = strlen(unitname);
 #define _offsetof(t, m) ((int)((caddr_t)&((t *)0)->m))
+    // 掩码便宜量
 	masklen = _offsetof(struct sockaddr_dl, sdl_data[0]) +
 			       unitlen + namelen;
 	socksize = masklen + ifp->if_addrlen;
@@ -134,13 +145,16 @@ if_attach(ifp)
 	socksize = ROUNDUP(socksize);
 	if (socksize < sizeof(*sdl))
 		socksize = sizeof(*sdl);
+    // 分配内存
 	ifasize = sizeof(*ifa) + 2 * socksize;
 	if ( (ifa = (struct ifaddr *)malloc(ifasize, M_IFADDR, M_WAITOK)) != NULL) {
+        // 初始化sockaddr_dl address
 		bzero((caddr_t)ifa, ifasize);
 		sdl = (struct sockaddr_dl *)(ifa + 1);
 		sdl->sdl_len = socksize;
 		sdl->sdl_family = AF_LINK;
 		bcopy(ifp->if_name, sdl->sdl_data, namelen);
+        // 接口名称初始化
 		bcopy(unitname, namelen + (caddr_t)sdl->sdl_data, unitlen);
 		sdl->sdl_nlen = (namelen += unitlen);
 		sdl->sdl_index = ifp->if_index;
@@ -151,6 +165,7 @@ if_attach(ifp)
 		ifa->ifa_rtrequest = link_rtrequest;
 		ifp->if_addrlist = ifa;
 		ifa->ifa_addr = (struct sockaddr *)sdl;
+        // 初始化sockaddr_dl 掩码
 		sdl = (struct sockaddr_dl *)(socksize + (caddr_t)sdl);
 		ifa->ifa_netmask = (struct sockaddr *)sdl;
 		sdl->sdl_len = masklen;
@@ -159,6 +174,7 @@ if_attach(ifp)
 	}
 	/* XXX -- Temporary fix before changing 10 ethernet drivers */
 	if (ifp->if_output == ether_output)
+        // 初始化以太网设备
 		ether_ifattach(ifp);
 }
 
