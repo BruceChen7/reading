@@ -67,7 +67,7 @@
  */
 struct	mbuf;
 struct	proc;
-struct	rtentry;	
+struct	rtentry;
 struct	socket;
 struct	ether_header;
 #endif
@@ -82,20 +82,30 @@ struct	ether_header;
  */
 
 struct ifnet {
+    // 接口类型
 	char	*if_name;		/* name, e.g. ``en'' or ``lo'' */
+    // 构成一个链表
 	struct	ifnet *if_next;		/* all struct ifnets are chained */
+    // 通信协议的地址信息
 	struct	ifaddr *if_addrlist;	/* linked list of addresses per if */
         int	if_pcount;		/* number of promiscuous listeners */
 	caddr_t	if_bpf;			/* packet filter structure */
+    // 在内核中唯一表示这个接口的索引
 	u_short	if_index;		/* numeric abbreviation for this if  */
+    // 表示相同类型接口的实例
 	short	if_unit;		/* sub-unit for lower level driver */
 	short	if_timer;		/* time 'til if_watchdog called */
+    // 表明接口的操作状态和属性
+    // IFF_BROADCAST 广播
+    // IFF_LOOPBACK 回环
 	short	if_flags;		/* up/down, broadcast, etc. */
 	struct	if_data {
 /* generic interface information */
+        // 指明接口支持的硬件地址类型
 		u_char	ifi_type;	/* ethernet, tokenring, etc */
 		u_char	ifi_addrlen;	/* media address length */
 		u_char	ifi_hdrlen;	/* media header length */
+        // 传输的
 		u_long	ifi_mtu;	/* maximum transmission unit */
 		u_long	ifi_metric;	/* routing metric (external only) */
 		u_long	ifi_baudrate;	/* linespeed */
@@ -113,6 +123,7 @@ struct ifnet {
 		u_long	ifi_noproto;	/* destined for unsupported protocol */
 		struct	timeval ifi_lastchange;/* last updated */
 	}	if_data;
+    // 接口对应的函数回调
 /* procedure handles */
 	int	(*if_init)		/* init routine */
 		__P((int));
@@ -125,13 +136,15 @@ struct ifnet {
 		__P((struct ifnet *));	/* (XXX not used; fake prototype) */
 	int	(*if_ioctl)		/* ioctl routine */
 		__P((struct ifnet *, u_long, caddr_t));
-	int	(*if_reset)	
+	int	(*if_reset)
 		__P((int));		/* new autoconfig will permit removal */
 	int	(*if_watchdog)		/* timer routine */
 		__P((int));
+    // 接口输出分组队列
 	struct	ifqueue {
 		struct	mbuf *ifq_head;
 		struct	mbuf *ifq_tail;
+        // 分组的长度
 		int	ifq_len;
 		int	ifq_maxlen;
 		int	ifq_drops;

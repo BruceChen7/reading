@@ -44,17 +44,25 @@ void cpu_startup()
 
 void init()
 {
+  // 当前进程信息
   curproc->p_cred = &cred0;
   curproc->p_ucred = &ucred0;
 
+  // 绑定回环设备
+  // 用来初始化回环设备
   loopattach(1);
+  // 初始化process和kernel之间的buffer
   mbinit();
   cpu_startup();
 
+  // 禁止packets的吸收
   int s = splimp();
+  // 网络接口初始化
   ifinit();
+  // 协议初始化
   domaininit();
   route_init();
+  // 打开
   splx(s);
 
   setipaddr("lo0", 0x7f000001);

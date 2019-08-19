@@ -81,7 +81,7 @@ struct	ether_header {
  * Ethernet Address Resolution Protocol.
  *
  * See RFC 826 for protocol description.  Structure below is adapted
- * to resolving internet addresses.  Field names used correspond to 
+ * to resolving internet addresses.  Field names used correspond to
  * RFC 826.
  */
 struct	ether_arp {
@@ -104,14 +104,18 @@ struct	ether_arp {
  * begins with this structure.
  */
 struct	arpcom {
+    // 网络设备公有的结构体
 	struct 	ifnet ac_if;		/* network-visible interface */
+    // 硬件地址，mac地址
 	u_char	ac_enaddr[6];		/* ethernet hardware address */
+    // 上一次分配给设备的ip地址
 	struct	in_addr ac_ipaddr;	/* copy of ip address- XXX */
+    // 以太网多播地址表
 	struct	ether_multi *ac_multiaddrs; /* list of ether multicast addrs */
-	int	ac_multicnt;		/* length of ac_multiaddrs list */	
+	int	ac_multicnt;		/* length of ac_multiaddrs list */
 };
 
-struct llinfo_arp {				
+struct llinfo_arp {
 	struct	llinfo_arp *la_next;
 	struct	llinfo_arp *la_prev;
 	struct	rtentry *la_rt;

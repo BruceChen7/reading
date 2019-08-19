@@ -81,19 +81,26 @@ void
 loopattach(n)
 	int n;
 {
+    // 绑定回环设备
 	register struct ifnet *ifp = &loif;
 
 #ifdef lint
 	n = n;			/* Highlander: there can only be one... */
 #endif
 	ifp->if_name = "lo";
-	ifp->if_mtu = LOMTU;
-	ifp->if_flags = IFF_LOOPBACK | IFF_MULTICAST;
+    // 设置为1536个字节
+	ifp->if_mtu = LOMTU; // 回环设备的m_tu
+	ifp->if_flags = IFF_LOOPBACK | IFF_MULTICAST; // 回环和多播
 	ifp->if_ioctl = loioctl;
+    // 输出routine
 	ifp->if_output = looutput;
+    // 显示的设置回环设备
 	ifp->if_type = IFT_LOOP;
+    // 没有链路首部
 	ifp->if_hdrlen = 0;
+    // 没有硬件地址
 	ifp->if_addrlen = 0;
+    // 完成ifnet的初始化
 	if_attach(ifp);
 #if NBPFILTER > 0
 	bpfattach(&ifp->if_bpf, ifp, DLT_NULL, sizeof(u_int));
