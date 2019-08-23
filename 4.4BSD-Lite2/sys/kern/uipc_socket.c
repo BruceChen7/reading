@@ -64,12 +64,13 @@ socreate(dom, aso, type, proto)
 	register int type;
 	int proto;
 {
+    // 获取当前进程
 	struct proc *p = curproc;		/* XXX */
 	register struct protosw *prp;
 	register struct socket *so;
 	register int error;
 
-	if (proto)
+	if (proto)  // 这里一般为0
 		prp = pffindproto(dom, proto, type);
 	else
 		prp = pffindtype(dom, type);
@@ -77,12 +78,15 @@ socreate(dom, aso, type, proto)
 		return (EPROTONOSUPPORT);
 	if (prp->pr_type != type)
 		return (EPROTOTYPE);
+    // 分配一个socket
 	MALLOC(so, struct socket *, sizeof(*so), M_SOCKET, M_WAIT);
 	bzero((caddr_t)so, sizeof(*so));
+    // 设置网络类型
 	so->so_type = type;
 	if (p->p_ucred->cr_uid == 0)
-		so->so_state = SS_PRIV;
+		so->so_state = SS_PRIV; // 设置当前socket状态
 	so->so_proto = prp;
+
 	error = (*prp->pr_usrreq)(so, PRU_ATTACH, (struct mbuf *)0,
 	    (struct mbuf *)(long)proto, (struct mbuf *)0);
 	if (error) {
@@ -90,7 +94,7 @@ socreate(dom, aso, type, proto)
 		sofree(so);
 		return (error);
 	}
-	*aso = so;
+	*aso = so; // 返回参数
 	return (0);
 }
 

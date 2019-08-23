@@ -24,6 +24,7 @@ struct socket* connectto(u_int32_t ip, u_int16_t port)
 }
 
 // util for setup a server socket
+// 创建一个socket
 struct socket* listenon(unsigned short port)
 {
 	// socket()
@@ -124,9 +125,11 @@ void handshake()
 	tcp_do_rfc1323 = 0;
 	struct socket* listenso = listenon(port);
 
-	// client
+	// 创建127.0.0.1,
+    // 端口为1234
 	struct socket* clientso = connectto(0x7f000001, port);
 
+    // 应该
 	printf("listenso readable=%d, writable=%d\n", soreadable(listenso), sowriteable(listenso));
 	printf("clientso readable=%d, writable=%d\n", soreadable(clientso), sowriteable(clientso));
 	puts("");

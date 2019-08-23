@@ -80,7 +80,7 @@ struct	ucred ucred0;
 // sys/i386/i386/machdep.c
 //////////////////////////////////////////////////////////////////////////////
 /*
- * insert an element into a queue 
+ * insert an element into a queue
  */
 #undef insque
 void _insque(element, head)

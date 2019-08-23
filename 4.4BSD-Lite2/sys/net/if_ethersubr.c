@@ -84,6 +84,7 @@ u_char	etherbroadcastaddr[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 extern	struct ifnet loif;
 #define senderr(e) { error = (e); goto bad;}
 
+// 以太网的输出routine
 /*
  * Ethernet output routine.
  * Encapsulate a packet of type family for the local net.
@@ -108,17 +109,25 @@ ether_output(ifp, m0, dst, rt0)
 	int off, len = m->m_pkthdr.len;
 	struct arpcom *ac = (struct arpcom *)ifp;
 
+    // 如果该接口已经启动了
 	if ((ifp->if_flags & (IFF_UP|IFF_RUNNING)) != (IFF_UP|IFF_RUNNING))
 		senderr(ENETDOWN);
+
+    // 更新该接口的上次修改更新时间
 	ifp->if_lastchange = time;
+    // 路由项为空的情况可能是从BPF中调用的，可能使rt为空
 	if ( (rt = rt0) != NULL) {
+        // 路由项无效
 		if ((rt->rt_flags & RTF_UP) == 0) {
+            // 查找路由表
 			if ( (rt0 = rt = rtalloc1(dst, 1)) != NULL)
 				rt->rt_refcnt--;
-			else 
+			else
 				senderr(EHOSTUNREACH);
 		}
+        // 如果下一跳地址是网关
 		if (rt->rt_flags & RTF_GATEWAY) {
+            // 没有则直接查找网关
 			if (rt->rt_gwroute == 0)
 				goto lookup;
 			if (((rt = rt->rt_gwroute)->rt_flags & RTF_UP) == 0) {
@@ -133,16 +142,28 @@ ether_output(ifp, m0, dst, rt0)
 			    time.tv_sec < rt->rt_rmx.rmx_expire)
 				senderr(rt == rt0 ? EHOSTDOWN : EHOSTUNREACH);
 	}
+    // 协议地址类型
+    // IP输出
 	switch (dst->sa_family) {
 
 #ifdef INET
+    // internet地址类型
+    // https://stackoverflow.com/questions/1593946/what-is-af-inet-and-why-do-i-need-it
 	case AF_INET:
+        // 使用arp高速缓存来查找以太网地址
+        // 没有找到直接返回0，这个ip分组由ARP控制，并且ARP判断地址，并且在其in_arpinput调用
+        // 这个ether_oupt
+        // 找到直接返回到edst
 		if (!arpresolve(ac, rt, m, dst, edst))
 			return (0);	/* if not yet resolved */
 		/* If broadcasting on a simplex interface, loopback a copy */
+        // 检查分组是否是广播
 		if ((m->m_flags & M_BCAST) && (ifp->if_flags & IFF_SIMPLEX))
+            // 复制这个分组
 			mcopy = m_copy(m, 0, (int)M_COPYALL);
 		off = m->m_pkthdr.len - m->m_len;
+
+        // 分组类型
 		type = ETHERTYPE_IP;
 		break;
 #endif
@@ -205,7 +226,7 @@ ether_output(ifp, m0, dst, rt0)
 #ifdef	LLC
 /*	case AF_NSAP: */
 	case AF_CCITT: {
-		register struct sockaddr_dl *sdl = 
+		register struct sockaddr_dl *sdl =
 			(struct sockaddr_dl *) rt -> rt_gateway;
 
 		if (sdl && sdl->sdl_family == AF_LINK
@@ -233,14 +254,14 @@ ether_output(ifp, m0, dst, rt0)
 			printf("ether_output: sending LLC2 pkt to: ");
 			for (i=0; i<6; i++)
 				printf("%x ", edst[i] & 0xff);
-			printf(" len 0x%x dsap 0x%x ssap 0x%x control 0x%x\n", 
+			printf(" len 0x%x dsap 0x%x ssap 0x%x control 0x%x\n",
 			       type & 0xff, l->llc_dsap & 0xff, l->llc_ssap &0xff,
 			       l->llc_control & 0xff);
 
 		}
 #endif /* LLC_DEBUG */
 		} break;
-#endif /* LLC */	
+#endif /* LLC */
 
 	case AF_UNSPEC:
 		eh = (struct ether_header *)dst->sa_data;
@@ -271,18 +292,23 @@ ether_output(ifp, m0, dst, rt0)
  	bcopy((caddr_t)edst, (caddr_t)eh->ether_dhost, sizeof (edst));
  	bcopy((caddr_t)ac->ac_enaddr, (caddr_t)eh->ether_shost,
 	    sizeof(eh->ether_shost));
+    // 阻止设备中断
 	s = splimp();
 	/*
 	 * Queue message on interface, and start output if interface
 	 * not yet active.
 	 */
+    // 如果该接口队列满了
 	if (IF_QFULL(&ifp->if_snd)) {
 		IF_DROP(&ifp->if_snd);
 		splx(s);
 		senderr(ENOBUFS);
-	}
+    }
+    // 进入到等待队列
 	IF_ENQUEUE(&ifp->if_snd, m);
+    // 没有正在传输，将会启动lestart来发送
 	if ((ifp->if_flags & IFF_OACTIVE) == 0)
+        // 启动接口来传输
 		(*ifp->if_start)(ifp);
 	splx(s);
 	ifp->if_obytes += len + sizeof (struct ether_header);
@@ -354,7 +380,7 @@ ether_input(ifp, eh, m)
 		l = mtod(m, struct llc *);
 		switch (l->llc_dsap) {
 #ifdef	ISO
-		case LLC_ISO_LSAP: 
+		case LLC_ISO_LSAP:
 			switch (l->llc_control) {
 			case LLC_UI:
 				/* LLC_UI_P forbidden in class 1 service */
@@ -378,7 +404,7 @@ ether_input(ifp, eh, m)
 					break;
 				}
 				goto dropanyway;
-				
+
 			case LLC_XID:
 			case LLC_XID_P:
 				if(m->m_len < 6)
@@ -406,7 +432,7 @@ ether_input(ifp, eh, m)
 				eh2 = (struct ether_header *)sa.sa_data;
 				for (i = 0; i < 6; i++) {
 					eh2->ether_shost[i] = c = eh->ether_dhost[i];
-					eh2->ether_dhost[i] = 
+					eh2->ether_dhost[i] =
 						eh->ether_dhost[i] = eh->ether_shost[i];
 					eh->ether_shost[i] = c;
 				}
@@ -428,7 +454,7 @@ ether_input(ifp, eh, m)
 			if (m == 0)
 				return;
 			if ( !sdl_sethdrif(ifp, eh->ether_shost, LLC_X25_LSAP,
-					    eh->ether_dhost, LLC_X25_LSAP, 6, 
+					    eh->ether_dhost, LLC_X25_LSAP, 6,
 					    mtod(m, struct sdl_hdr *)))
 				panic("ETHER cons addr failure");
 			mtod(m, struct sdl_hdr *)->sdlhdr_len = eh->ether_type;

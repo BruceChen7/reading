@@ -3,6 +3,7 @@
 struct	pcred cred0;
 struct	ucred ucred0;
 
+// 获取时间戳
 void updatetime()
 {
   microtime((struct timeval *)&time);
