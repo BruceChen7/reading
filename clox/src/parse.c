@@ -973,6 +973,7 @@ ParsingContext parse(Tokenization toknz)
     Stmt* stmt = NULL;
 
     if (tokens != NULL) {
+        // list of statements
         stmts = list();
         // 这里看其实没有什么用
         nbTokens = tokens->count;
@@ -980,7 +981,7 @@ ParsingContext parse(Tokenization toknz)
         head = tokens->head;
 
         while (!END_OF_TOKENS(((Token*)head->data)->type)) {
-            // 直接从declarition开始解析
+            // 从declaration开始解析
             stmt = declaration(&head);
             if (stmt != NULL) {
                 list_push(stmts, stmt);

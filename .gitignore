@@ -3,3 +3,4 @@ build
 compile_commands.json
 bin
 objs
+.ycm_extra_conf.py
