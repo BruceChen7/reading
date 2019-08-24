@@ -483,9 +483,11 @@ leinit(unit)
  * off of the interface queue, and copy it to the interface
  * before starting the output.
  */
+// 从输出队列中取出分组开始发生
 lestart(ifp)
 	struct ifnet *ifp;
 {
+    // 获取该接口对应的物理设备
 	register struct le_softc *le = &le_softc[ifp->if_unit];
 	register int bix = le->sc_tmdnext;
 	register volatile void *tmd = LER2_TMDADDR(le->sc_r2, bix);
