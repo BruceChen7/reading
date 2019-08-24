@@ -19,6 +19,7 @@ List* list()
     return list;
 }
 
+// 节点并没有复制，由push的来删除
 Node* list_push(List* list, void* data)
 {
     Node* newNode = node(data);
@@ -118,15 +119,18 @@ int list_remove_at(List* list, unsigned int index)
     return 1;
 }
 
+// 释放各个节点的内存
 void list_clear(List* list)
 {
     Node *n = NULL, *prev = NULL;
     if (list == NULL) {
         return;
     }
+    // 从后往前来删除
     n = list->last;
     while (n != NULL) {
         prev = n->prev;
+        // 这里并没有node中的value节点
         fr(n);
         n = prev;
     }

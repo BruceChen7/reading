@@ -21,13 +21,18 @@ int dict_add(Dictionary* dict, const char* key, void* value)
     KeyValuePair *pair = NULL, *bucket = NULL;
     int hash = 0;
     if (dict != NULL) {
+        // 没有找到对应的key
         if (!dict_contains(dict, key)) {
             pair = (KeyValuePair*)alloc(sizeof(KeyValuePair));
+            // 复制一份内存
             pair->key = (char*)clone((void*)key, strlen(key) + 1);
+
             pair->value = value;
             pair->next = NULL;
             hash = hash_code(key);
+            // 计算hash值
             bucket = dict->buckets[hash];
+            // 如果没有设置过，那么是第一个,直接设置为bucket
             if (bucket == NULL) {
                 dict->buckets[hash] = pair;
             } else {

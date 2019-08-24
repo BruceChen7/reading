@@ -12,6 +12,7 @@ void setipaddr(const char* name, uint ip)
 {
   //int fd = socket(AF_INET, SOCK_DGRAM, 0);
   struct ifreq req;
+  // 把每一个字节都清空
   bzero(&req, sizeof req);
   strcpy(req.ifr_name, name);
   struct sockaddr_in loaddr;
@@ -55,12 +56,13 @@ void init()
   mbinit();
   cpu_startup();
 
-  // 禁止packets的吸收
+  // 禁止packets的读取
   int s = splimp();
   // 网络接口初始化
   ifinit();
   // 协议初始化
   domaininit();
+  // 路由表初始化？
   route_init();
   // 打开
   splx(s);

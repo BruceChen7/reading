@@ -55,6 +55,7 @@ static Node** consume(Node** node, TokenType type, const char* msg)
         // 放回当前节点
         return &(*node)->prev;
     }
+    // 只是简单打印错误
     parse_error(tkn, msg);
     return NULL;
 }
@@ -116,7 +117,7 @@ static AssignmentExpr* new_assignment(Token variableName, Expr* rightExpr)
     return expr;
 }
 
-// Binary Expression  -> Expression (MatchToken  Expression)?
+// Binary Expression  -> Expression (MatchToken  Expression)*
 static Expr* binary_production(Node** node, Expr* (*rule)(Node** t), TokenType matchTokens[], int n)
 {
     Expr *expr = rule(node), *exprRight = NULL;
@@ -276,6 +277,7 @@ static Expr* finish_call(Node** node, Expr* callee)
     return new_expr(EXPR_CALL, new_call(callee, args, *paren));
 }
 
+// call expression
 static Expr* call(Node** node)
 {
     Expr* expr = primary(node);
@@ -304,6 +306,7 @@ static Expr* call(Node** node)
     return expr;
 }
 
+// unary expression -> [minus exprssion | bang expression ]?
 static Expr* unary(Node** node)
 {
     Expr* rightExpr = NULL;
@@ -321,6 +324,7 @@ static Expr* unary(Node** node)
     return call(node);
 }
 
+// mutiplication-> ["*"|"/"]unary expression
 static Expr* mutiplication(Node** node)
 {
     TokenType multiplicationTokens[] = {
@@ -330,6 +334,7 @@ static Expr* mutiplication(Node** node)
     return binary_production(node, unary, multiplicationTokens, 2);
 }
 
+// addition -> mutiplication expression [+ / ] [muliexprssion]
 static Expr* addition(Node** node)
 {
     TokenType additionTokens[] = {
@@ -339,6 +344,7 @@ static Expr* addition(Node** node)
     return binary_production(node, mutiplication, additionTokens, 2);
 }
 
+// equalexpresson -> addtion expression [> | >= | <= | <] addition expression
 static Expr* comparison(Node** node)
 {
     TokenType comparisonTokens[] = {
@@ -350,7 +356,6 @@ static Expr* comparison(Node** node)
     return binary_production(node, addition, comparisonTokens, 4);
 }
 
-// EqualityExpression -> BinaryExpr
 static Expr* equality(Node** node)
 {
     TokenType equalityTokens[] = {
@@ -367,7 +372,7 @@ static Expr* assignment(Node** node)
 {
     // 先计算逻辑或的表达式
     Expr *expr = logicOr(node), *value = NULL;
-    Node* equals = *node;
+    Node* eqals = *node;
     GetExpr* get = NULL;
     SetExpr* set = NULL;
 
@@ -375,7 +380,9 @@ static Expr* assignment(Node** node)
         (*node) = (*node)->next;
         // assignment
         value = assignment(node);
+        // 如果 Orexpression 生成的是一个变量
         if (expr != NULL && expr->type == EXPR_VARIABLE) {
+            // 那么生成一个 赋值表达式
             return new_expr(EXPR_ASSIGNMENT, new_assignment(((VariableExpr*)expr->expr)->variableName, value));
         } else if (expr->type == EXPR_GET) {
             get = (GetExpr*)expr->expr;
@@ -420,7 +427,7 @@ static Expr* logicOr(Node** node)
     return expr;
 }
 
-// AndExpression -> EqualityExpression ( " && "  EqualityExpression)?
+// AndExpression -> EqualityExpression ( " && "  EqualityExpression)*
 static Expr* logicAnd(Node** node)
 {
     Expr *expr = equality(node), *right = NULL;
@@ -442,6 +449,7 @@ static Expr* expression(Node** node)
     return assignment(node);
 }
 
+// 这里同步指的是将错误进行消化
 static void synchronize(Node** node)
 {
     Token *token = NULL, *prevToken;
@@ -467,6 +475,7 @@ static void synchronize(Node** node)
                 // 这里也是直接返回
                 return;
             }
+            // 其他节点类型直接指向下一个
             (*node) = (*node)->next;
         }
     }
@@ -477,18 +486,24 @@ static Node** terminated_statement(Node** node)
     return consume(node, TOKEN_SEMICOLON, "Expect ';' after value");
 }
 
+// 更具type来实现重载的意思
 static Stmt* new_statement(StmtType type, void* realStmt)
 {
     Stmt* stmt = (Stmt*)alloc(sizeof(Stmt));
     memset(stmt, 0, sizeof(Stmt));
+    // statement类型
     stmt->type = type;
+    // 这里是实际的statement
     stmt->realStmt = realStmt;
     return stmt;
 }
 
+// 创建终结符节点
 static Stmt* new_terminated_statement(Node** node, StmtType type, void* realStmt)
 {
+    // 先消耗分号
     if (terminated_statement(node) != NULL) {
+        // 然后创建statement
         return new_statement(type, realStmt);
     }
 
@@ -511,11 +526,18 @@ static Stmt* expression_statement(Node** node)
     return new_terminated_statement(node, STMT_EXPR, stmt);
 }
 
+// 创建var statement的叶子节点
 static Stmt* var_statement(Node** node, Expr* initializer, Token variableName)
 {
+    // 分配内存
     VarDeclarationStmt* stmt = (VarDeclarationStmt*)alloc(sizeof(VarDeclarationStmt));
+    // 表达式
     stmt->initializer = initializer;
+    // 变量名称
     stmt->varName = variableName;
+    // 创建一个statment
+    // stmt是实际的statement
+    // 但是返回一个统一的Stmt来实现多态
     return new_terminated_statement(node, STMT_VAR_DECLARATION, stmt);
 }
 
@@ -623,6 +645,7 @@ static Stmt* declaration(Node** node)
         (*node) = (*node)->next;
         return class_statement(node);
     } else if (MATCH(tkn->type, TOKEN_FUN)) {
+        // 前进一个节点，然后继续解析
         (*node) = (*node)->next;
         return fun_statement("function", node);
     } else if (MATCH(tkn->type, TOKEN_VAR)) {
@@ -812,6 +835,7 @@ static void literal_destroy(LiteralExpr* expr)
     fr(expr);
 }
 
+// 根据表达式不同的类型来删除对应的内存节点
 static void expr_destroy(Expr* expr)
 {
     Expr* ex = NULL;
@@ -942,6 +966,7 @@ static Stmt* return_statement(Node** node)
     return new_statement(STMT_RETURN, returnStmt);
 }
 
+// 循环list，各个删除
 static void stmts_destroy(List* stmts)
 {
     if (stmts->count != 0) {
@@ -952,6 +977,7 @@ static void stmts_destroy(List* stmts)
 
 void parser_destroy(ParsingContext* ctx)
 {
+    // 分成两大类：statement和expression
     if (ctx->stmts != NULL) {
         stmts_destroy(ctx->stmts);
         ctx->stmts = NULL;
@@ -984,6 +1010,7 @@ ParsingContext parse(Tokenization toknz)
             // 从declaration开始解析
             stmt = declaration(&head);
             if (stmt != NULL) {
+                // 这里list中的每个node为Stmt
                 list_push(stmts, stmt);
             } else {
                 stmts_destroy(stmts);

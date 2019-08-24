@@ -123,6 +123,7 @@ typedef struct stmt_expr_t {
 
 typedef struct stmt_var_declaration_t {
     Expr* initializer;
+    // token
     Token varName;
 } VarDeclarationStmt;
 

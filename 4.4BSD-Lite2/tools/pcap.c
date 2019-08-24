@@ -21,6 +21,7 @@ struct pcap_record_header {
 };
 
 int pcap_enabled;
+// 全局指针
 FILE* pcap_fp;
 
 void pcap_start(const char* filename)
@@ -39,6 +40,7 @@ void pcap_start(const char* filename)
     .network = 101  // Raw IP
   };
 
+  // 直接写入
   int nw = fwrite(&header, 1, sizeof header, pcap_fp);
   assert(nw == sizeof header);
 
@@ -63,7 +65,9 @@ void pcap_write(const char *buf, int len, int origlen)
     .orig_len = origlen
   };
 
+  // 将直接将结构体写入到文件中
   int nw = fwrite(&record, 1, sizeof record, pcap_fp);
+  // 确保写入的
   assert(nw == sizeof record);
   nw = fwrite(buf, 1, len, pcap_fp);
   assert(nw == len);

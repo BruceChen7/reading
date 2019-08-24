@@ -871,6 +871,7 @@ static Object* find_method(Class type, Object* instanceObj, char* name)
 static Object* instance_get(Object* instanceObj, Token name)
 {
     Object* member = NULL;
+    // 将值抓成
     ClassInstance* instance = (ClassInstance*)instanceObj->value;
 
     if (dict_contains(instance->fields, name.lexeme)) {

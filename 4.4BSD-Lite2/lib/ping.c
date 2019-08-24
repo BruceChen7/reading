@@ -24,6 +24,7 @@ void inject(char* msg, int len)
 {
 	struct mbuf *m = m_devget(msg, len, 0, NULL, NULL);
 	enqueue(&ipintrq, m);
+    // 更新时间
 	updatetime();
 	ipintr();
 }

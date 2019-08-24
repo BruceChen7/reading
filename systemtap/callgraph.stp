@@ -3,7 +3,7 @@ function trace(entry_p, extra) {
   /* 如果输入的probe，不止一个，那么要查看当前线程是否在跟踪线程中 */
   /* 如果不在，那么printf 不会执行 */
   %( $# > 1 %? if (tid() in trace) %)
-  
+
   /* thread_indent会返回一个带适当缩进的字符串 */
   注意理解，下面有例子
   printf("%s%s%s %s\n",

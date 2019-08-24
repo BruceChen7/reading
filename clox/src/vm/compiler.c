@@ -177,6 +177,7 @@ static void prec_parse(Precedence prec)
     }
 }
 
+// 这里是根据情况
 static void synchronize()
 {
     TokenType currentType = ((Token*)parser.current->data)->type;

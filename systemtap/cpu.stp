@@ -1,7 +1,7 @@
 #!/usr/env/stap
 global timestamp, stat
 
-/*这里的timestamp是数组*/
+/* 这里的timestamp是数组 */
 probe scheduler.cpu_on {
     if (!idle)
         timestamp[cpu()] = gettimeofday_ns()

@@ -17,6 +17,7 @@ void fr(void* mem)
     free(mem);
 }
 
+// copy
 void* clone(void* src, size_t size)
 {
     void* dst = alloc(size);
