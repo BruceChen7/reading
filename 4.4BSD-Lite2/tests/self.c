@@ -12,7 +12,9 @@ int main(int argc, char* argv[])
 
   pcap_start("self.pcap");
   tcp_do_rfc1323 = 0;
+  // 127.0.0.1
   struct socket* clientso = connectto(0x7f000001, 1024);
+
   ipintr();  // self connection made
 
   int nw = writeso(clientso, "hello", 5);

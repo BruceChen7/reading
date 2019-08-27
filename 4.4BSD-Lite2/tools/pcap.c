@@ -28,8 +28,10 @@ void pcap_start(const char* filename)
 {
   assert(!pcap_enabled && pcap_fp == NULL);
 
+  // 打开文件
   pcap_fp = fopen(filename, "w");
 
+  // 写入头
   struct pcap_header header = {
     .magic_number = 0xa1b2c3d4,
     .version_major = 2,

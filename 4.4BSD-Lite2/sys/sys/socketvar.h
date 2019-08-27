@@ -42,9 +42,14 @@
  * private data and error information.
  */
 struct socket {
+    // 由应用进程指定
+    // TCP连接为SOCK_STREAM, UDP为SOCK_DGRAM
 	short	so_type;		/* generic type, see socket.h */
+    // 通过setsockopt系统调用的选项
 	short	so_options;		/* from socket call, see socket.h */
+    // 关闭连接的时间间隔，单位为一个时钟滴答
 	short	so_linger;		/* time to linger while closing */
+    // socket 内部的状态
 	short	so_state;		/* internal state flags SS_*, below */
 	caddr_t	so_pcb;			/* protocol control block */
 	struct	protosw *so_proto;	/* protocol handle */
@@ -59,19 +64,34 @@ struct socket {
  * We allow connections to queue up based on current queue lengths
  * and limit on number of queued connections for this socket.
  */
+
+    //=====================================================================
+    // so_q0是没有完成3次握手的队列
+    // so_q是已经accept的队列
+    //=====================================================================
+
+    // 接受socket的最后一个
 	struct	socket *so_head;	/* back pointer to accept socket */
+    // 部分连接
 	struct	socket *so_q0;		/* queue of partial connections */
 	struct	socket *so_q;		/* queue of incoming connections */
 	short	so_q0len;		/* partials on so_q0 */
 	short	so_qlen;		/* number of connections on so_q */
+
+    // 可以使用listen来改变的值
 	short	so_qlimit;		/* max number queued connections */
+    // close, accpet, listen 等的超时时间
 	short	so_timeo;		/* connection timeout */
+
 	u_short	so_error;		/* error affecting connection */
+
 	pid_t	so_pgid;		/* pgid for signals */
 	u_long	so_oobmark;		/* chars to oob mark */
 /*
  * Variables for socket buffering.
  */
+    // 每一个socket都带2个缓存，一个是rcv buffer
+    // 一个是send buffer
 	struct	sockbuf {
 		u_long	sb_cc;		/* actual chars in buffer */
 		u_long	sb_hiwat;	/* max actual char count */
