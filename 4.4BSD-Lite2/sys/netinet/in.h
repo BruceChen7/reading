@@ -72,6 +72,8 @@
  * Internet address (a structure for historical reasons)
  */
 struct in_addr {
+    // 因为历史原因所有是结构体
+    // 采用大端，也就是主机字节序来保存
 	u_long s_addr;
 };
 
@@ -122,8 +124,8 @@ struct in_addr {
  * Socket address, internet style.
  */
 struct sockaddr_in {
-	u_char	sin_len;
-	u_char	sin_family;
+	u_char	sin_len;  // 这里总是填16，也就是sockaddr_in结构体的大小
+	u_char	sin_family; // 使用Internet协议
 	u_short	sin_port;
 	struct	in_addr sin_addr;
 	char	sin_zero[8];

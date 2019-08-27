@@ -39,7 +39,9 @@
  * The ifaddr structure contains the protocol-independent part
  * of the structure and is assumed to be first.
  */
+// 为internet协议定义的接口
 struct in_ifaddr {
+    // 通用地址接口
 	struct	ifaddr ia_ifa;		/* protocol-independent info */
 #define	ia_ifp		ia_ifa.ifa_ifp
 #define ia_flags	ia_ifa.ifa_flags
@@ -49,6 +51,7 @@ struct in_ifaddr {
 	u_long	ia_subnet;		/* subnet number, including net */
 	u_long	ia_subnetmask;		/* mask of subnet part */
 	struct	in_addr ia_netbroadcast; /* to recognize net broadcasts */
+    // 同一个接口分配的多个internet ip用列表连接起来
 	struct	in_ifaddr *ia_next;	/* next in list of internet addresses */
 	struct	sockaddr_in ia_addr;	/* reserve space for interface name */
 	struct	sockaddr_in ia_dstaddr; /* reserve space for broadcast addr */
