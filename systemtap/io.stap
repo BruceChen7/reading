@@ -1,0 +1,15 @@
+# Based on a script by Mike Grundy and Mike Mason from IBM
+global reads, writes
+# 这里vfs的probe需要通过安装linux-kernel-header来，否则是没有这种probe的
+probe vfs.read { reads[pid()] += count }
+probe vfs.write { writes[pid()] += count }
+# print top 5 IO users by pid every 5 seconds
+probe timer.s(5) {
+    printf ("\n%-10s\t%10s\t%15s\n", "Process ID",
+        "KB Read", "KB Written")
+    foreach (id in reads limit 5)
+        printf("%-10d\t%10d\t%15d\n", id,
+            reads[id]/1024, writes[id]/1024)
+    delete reads
+    delete writes
+}
