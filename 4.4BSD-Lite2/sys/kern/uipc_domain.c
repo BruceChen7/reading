@@ -127,11 +127,13 @@ pffindproto(family, protocol, type)
 	if (family == 0)
 		return (0);
 	for (dp = domains; dp; dp = dp->dom_next)
+        // 找到对应的与了
 		if (dp->dom_family == family)
 			goto found;
 	return (0);
 found:
 	for (pr = dp->dom_protosw; pr < dp->dom_protoswNPROTOSW; pr++) {
+        // 对应的协议和域找到
 		if ((pr->pr_protocol == protocol) && (pr->pr_type == type))
 			return (pr);
 

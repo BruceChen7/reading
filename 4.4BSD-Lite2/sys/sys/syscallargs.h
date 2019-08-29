@@ -445,8 +445,11 @@ struct sigreturn_args {
 };
 
 struct bind_args {
+    // 文件描述符
 	syscallarg(int) s;
+    // 包含传输地址sockaddr_in结构
 	syscallarg(caddr_t) name;
+    // 指针的大小
 	syscallarg(int) namelen;
 };
 

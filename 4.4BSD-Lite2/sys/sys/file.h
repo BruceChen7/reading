@@ -67,6 +67,7 @@ struct file {
 		int	(*fo_close)	__P((struct file *fp, struct proc *p));
 	} *f_ops;
 	off_t	f_offset;
+    // 该节点指向的私有的数据
 	caddr_t	f_data;		/* vnode or socket */
 };
 

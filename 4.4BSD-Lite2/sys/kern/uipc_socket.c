@@ -57,6 +57,10 @@ int uiomove(caddr_t, int, struct uio *);
  * switching out to the protocol specific routines.
  */
 /*ARGSUSED*/
+// DOM表示请求的协议域PF_INET
+// proto 一般为0
+// type SO_STREAM, tcp 还是UDP协议
+// **aso用来保存新创建socket指针
 int
 socreate(dom, aso, type, proto)
 	int dom;
@@ -71,6 +75,7 @@ socreate(dom, aso, type, proto)
 	register int error;
 
 	if (proto)  // 这里一般为0
+        // 找到对应协议交换表
 		prp = pffindproto(dom, proto, type);
 	else
 		prp = pffindtype(dom, type);
@@ -80,6 +85,7 @@ socreate(dom, aso, type, proto)
 		return (EPROTOTYPE);
     // 分配一个socket
 	MALLOC(so, struct socket *, sizeof(*so), M_SOCKET, M_WAIT);
+    // 初始化为0
 	bzero((caddr_t)so, sizeof(*so));
     // 设置网络类型
 	so->so_type = type;
@@ -87,6 +93,7 @@ socreate(dom, aso, type, proto)
 		so->so_state = SS_PRIV; // 设置当前socket状态
 	so->so_proto = prp;
 
+    // 通知建立一个socket
 	error = (*prp->pr_usrreq)(so, PRU_ATTACH, (struct mbuf *)0,
 	    (struct mbuf *)(long)proto, (struct mbuf *)0);
 	if (error) {
@@ -107,6 +114,8 @@ sobind(so, nam)
 	int error;
 
 	error =
+        // 发送PRU_BIND请求
+        // 将so和地址(nam)联系起来
 	    (*so->so_proto->pr_usrreq)(so, PRU_BIND,
 		(struct mbuf *)0, nam, (struct mbuf *)0);
 	splx(s);
@@ -120,6 +129,8 @@ solisten(so, backlog)
 {
 	int s = splnet(), error;
 
+    // 发送PRU_LISTEN请求
+    // 使得套接字能够准备及接受数据
 	error =
 	    (*so->so_proto->pr_usrreq)(so, PRU_LISTEN,
 		(struct mbuf *)0, (struct mbuf *)0, (struct mbuf *)0);
@@ -128,9 +139,11 @@ solisten(so, backlog)
 		return (error);
 	}
 	if (so->so_q == 0)
+        // 
 		so->so_options |= SO_ACCEPTCONN;
 	if (backlog < 0)
 		backlog = 0;
+    // 取最小值
 	so->so_qlimit = min(backlog, SOMAXCONN);
 	splx(s);
 	return (0);
@@ -219,6 +232,8 @@ soabort(so)
 		(struct mbuf *)0, (struct mbuf *)0, (struct mbuf *)0));
 }
 
+// 获客户端的链接地址
+// 确保so与文件描述关联
 int
 soaccept(so, nam)
 	register struct socket *so;
@@ -230,6 +245,7 @@ soaccept(so, nam)
 	if ((so->so_state & SS_NOFDREF) == 0)
 		panic("soaccept: !NOFDREF");
 	so->so_state &= ~SS_NOFDREF;
+    // 向协议栈发送PRU_ACCEPT命令
 	error = (*so->so_proto->pr_usrreq)(so, PRU_ACCEPT,
 	    (struct mbuf *)0, nam, (struct mbuf *)0);
 	splx(s);

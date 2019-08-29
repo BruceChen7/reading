@@ -42,6 +42,7 @@
  */
 struct	mbuf;
 
+// AF_NET这种
 struct	domain {
 	int	dom_family;		/* AF_xxx */
 	char	*dom_name;

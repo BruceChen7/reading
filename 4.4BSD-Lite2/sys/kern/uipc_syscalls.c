@@ -71,6 +71,7 @@ int sockargs(struct mbuf **, caddr_t, int, int);
 int sendit(struct proc *, int, struct msghdr *, int, register_t*);
 int recvit(struct proc *, int, struct msghdr *, caddr_t, register_t*);
 
+// 创建socket
 int
 socket(p, uap, retval)
 	struct proc *p;
@@ -81,28 +82,39 @@ socket(p, uap, retval)
 	} */ *uap;
 	register_t *retval;
 {
+    // 获取当前进程的文件描述符
 	struct filedesc *fdp = p->p_fd;
 	struct socket *so;
 	struct file *fp;
 	int fd, error;
 
+    // 分配文件struct file
+    // 并设置fd，fp
 	if (error = falloc(p, &fp, &fd))
 		return (error);
-	fp->f_flag = FREAD|FWRITE;
+    // 设置该文件既可以读，又可以写
+    fp->f_flag = FREAD|FWRITE;
 	fp->f_type = DTYPE_SOCKET;
+    // 设置相关文操作的回调
 	fp->f_ops = &socketops;
+    // 创建一个socket接口
 	if (error = socreate(SCARG(uap, domain), &so, SCARG(uap, type),
 	    SCARG(uap, protocol))) {
+        // 文件描述表中的指针清空
 		fdp->fd_ofiles[fd] = 0;
+        // 释放内存
 		ffree(fp);
 	} else {
+        // f_data，指向socket接口
 		fp->f_data = (caddr_t)so;
+        // 返回fd
 		*retval = fd;
 	}
 	return (error);
 }
 
 /* ARGSUSED */
+// 用来绑定运输层的端口号
 int
 bind(p, uap, retval)
 	struct proc *p;
@@ -117,17 +129,24 @@ bind(p, uap, retval)
 	struct mbuf *nam;
 	int error;
 
+    // 将文件描述符映射到file选项中
+    // 返回fp文件结构
 	if (error = getsock(p->p_fd, SCARG(uap, s), &fp))
 		return (error);
+    //
+    //// 将本地地址复制到mbuf中
 	if (error = sockargs(&nam, SCARG(uap, name), SCARG(uap, namelen),
 	    MT_SONAME))
 		return (error);
 	error = sobind((struct socket *)fp->f_data, nam);
+    // 释放mbuf
 	m_freem(nam);
 	return (error);
 }
 
 /* ARGSUSED */
+// 参数为2个，一个是指定的socket s
+// 另一个是backlog最大连接数
 int
 listen(p, uap, retval)
 	struct proc *p;
@@ -140,6 +159,7 @@ listen(p, uap, retval)
 	struct file *fp;
 	int error;
 
+    // 获取对应的文件
 	if (error = getsock(p->p_fd, SCARG(uap, s), &fp))
 		return (error);
 	return (solisten((struct socket *)fp->f_data, SCARG(uap, backlog)));
@@ -178,6 +198,8 @@ compat_43_accept(p, uap, retval)
 #define	accept1	accept
 #endif
 
+// name位缓存指针
+// anmelen表示指针地址
 int
 accept1(p, uap, retval, compat_43)
 	struct proc *p;
@@ -194,6 +216,7 @@ accept1(p, uap, retval, compat_43)
 	int namelen, error, s, tmpfd;
 	register struct socket *so;
 
+    // 将地址拷贝
 	if (SCARG(uap, name) && (error = copyin((caddr_t)SCARG(uap, anamelen),
 	    (caddr_t)&namelen, sizeof (namelen))))
 		return (error);
@@ -201,37 +224,45 @@ accept1(p, uap, retval, compat_43)
 		return (error);
 	s = splnet();
 	so = (struct socket *)fp->f_data;
+    // 如果不是通过listen的，直接返回
 	if ((so->so_options & SO_ACCEPTCONN) == 0) {
 		splx(s);
 		return (EINVAL);
 	}
+    // 如果状态是non-blocing且接收队列为空
 	if ((so->so_state & SS_NBIO) && so->so_qlen == 0) {
 		splx(s);
 		return (EWOULDBLOCK);
 	}
+    // 接入的链接为0
 	while (so->so_qlen == 0 && so->so_error == 0) {
+        // 不能从对端接受到数据
 		if (so->so_state & SS_CANTRCVMORE) {
 			so->so_error = ECONNABORTED;
 			break;
 		}
+        // suspend current process
 		if (error = tsleep((caddr_t)&so->so_timeo, PSOCK | PCATCH,
 		    netcon, 0)) {
 			splx(s);
 			return (error);
 		}
 	}
+    // 清空这个套接字的错误
 	if (so->so_error) {
 		error = so->so_error;
 		so->so_error = 0;
 		splx(s);
 		return (error);
 	}
+    // 分配一个新的套接字
 	if (error = falloc(p, &fp, &tmpfd)) {
 		splx(s);
 		return (error);
 	}
 	*retval = tmpfd;
 	{ struct socket *aso = so->so_q;
+        // 移除本套接字
 	  if (soqremque(aso, 1) == 0)
 		panic("accept");
 	  so = aso;
