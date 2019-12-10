@@ -92,7 +92,9 @@ tcp_usrreq(so, req, m, nam, control)
 		return (EINVAL);
 	}
 
+    // 禁止中断
 	s = splnet();
+    // 获取协议控制块
 	inp = sotoinpcb(so);
 	/*
 	 * When a TCP is attached to a socket, then there will be
@@ -131,11 +133,14 @@ tcp_usrreq(so, req, m, nam, control)
 	 * and an internet control block.
 	 */
 	case PRU_ATTACH:
-		if (inp) {
+        // 去过存在协议控制块，那么说明该socket的已经存在
+	    if (inp) {
 			error = EISCONN;
 			break;
 		}
+        // 创建tcp 的控制块
 		error = tcp_attach(so);
+        // 如果有错误，直接退出
 		if (error)
 			break;
 		if ((so->so_options & SO_LINGER) && so->so_linger == 0)
@@ -440,16 +445,22 @@ tcp_attach(so)
 	struct inpcb *inp;
 	int error;
 
+    // 发送缓冲区可用空间为0
 	if (so->so_snd.sb_hiwat == 0 || so->so_rcv.sb_hiwat == 0) {
 		error = soreserve(so, tcp_sendspace, tcp_recvspace);
 		if (error)
 			return (error);
 	}
+    // 分配inpcb
+    // 并初始化
 	error = in_pcballoc(so, &tcb);
 	if (error)
 		return (error);
+    // 获取通用的协议控制块
 	inp = sotoinpcb(so);
+    // 分配tcp的控制块
 	tp = tcp_newtcpcb(inp);
+    // 分配失败
 	if (tp == 0) {
 		int nofd = so->so_state & SS_NOFDREF;	/* XXX */
 
@@ -458,6 +469,7 @@ tcp_attach(so)
 		so->so_state |= nofd;
 		return (ENOBUFS);
 	}
+    // tcp处于close的状态
 	tp->t_state = TCPS_CLOSED;
 	return (0);
 }

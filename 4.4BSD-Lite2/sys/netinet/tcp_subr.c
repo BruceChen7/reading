@@ -213,10 +213,14 @@ tcp_newtcpcb(inp)
 	if (tp == NULL)
 		return ((struct tcpcb *)0);
 	bzero((char *) tp, sizeof(struct tcpcb));
+    // 都指向自己
 	tp->seg_next = tp->seg_prev = (struct tcpiphdr *)tp;
+    // 设置tcp segment最大为512
 	tp->t_maxseg = tcp_mssdflt;
 
+    // 打开rfc1323
 	tp->t_flags = tcp_do_rfc1323 ? (TF_REQ_SCALE|TF_REQ_TSTMP) : 0;
+    // 设置通用的控制块
 	tp->t_inpcb = inp;
 	/*
 	 * Init srtt to TCPTV_SRTTBASE (0), so we can tell that we have no
@@ -226,12 +230,16 @@ tcp_newtcpcb(inp)
 	tp->t_srtt = TCPTV_SRTTBASE;
 	tp->t_rttvar = tcp_rttdflt * PR_SLOWHZ << 2;
 	tp->t_rttmin = TCPTV_MIN;
-	TCPT_RANGESET(tp->t_rxtcur, 
+	TCPT_RANGESET(tp->t_rxtcur,
 	    ((TCPTV_SRTTBASE >> 2) + (TCPTV_SRTTDFLT << 2)) >> 1,
 	    TCPTV_MIN, TCPTV_REXMTMAX);
+    // 发送窗口大小
 	tp->snd_cwnd = TCP_MAXWIN << TCP_MAX_WINSHIFT;
+    // 14 个 65536
 	tp->snd_ssthresh = TCP_MAXWIN << TCP_MAX_WINSHIFT;
+    // ttl设置
 	inp->inp_ip.ip_ttl = ip_defttl;
+    // 通用控制块指向了自己
 	inp->inp_ppcb = (caddr_t)tp;
 	return (tp);
 }
@@ -279,7 +287,7 @@ tcp_close(tp)
 
 	/*
 	 * If we sent enough data to get some meaningful characteristics,
-	 * save them in the routing entry.  'Enough' is arbitrarily 
+	 * save them in the routing entry.  'Enough' is arbitrarily
 	 * defined as the sendpipesize (default 4K) * 16.  This would
 	 * give us 16 rtt samples assuming we only get one sample per
 	 * window (the usual case on a long haul net).  16 samples is
@@ -398,7 +406,7 @@ tcp_notify(inp, error)
 	} else if (tp->t_state < TCPS_ESTABLISHED && tp->t_rxtshift > 3 &&
 	    tp->t_softerror)
 		so->so_error = error;
-	else 
+	else
 		tp->t_softerror = error;
 	wakeup((caddr_t) &so->so_timeo);
 	sorwakeup(so);

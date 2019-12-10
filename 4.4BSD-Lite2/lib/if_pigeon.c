@@ -55,18 +55,24 @@ pigeonioctl(ifp, cmd, data)
 	return error;
 }
 
+// RFC 1149: IP数据包通过鸟类来传送
+// 鸽子设备
 void pigeonattach(int n)
 {
 	pigeon_out_queue.ifq_maxlen = IFQ_MAXLEN;
 	register struct ifnet *ifp = &pigeonif;
+    // 接口名称
 	ifp->if_name = "pg";
+    // MTU为1500
 	ifp->if_mtu = 1500;
+    // 点对点设备
 	ifp->if_flags = 0;  // IFF_POINTOPOINT;
 	ifp->if_ioctl = pigeonioctl;
 	ifp->if_output = pigeonoutput;
 	ifp->if_type = IFT_PIGEON;
 	ifp->if_hdrlen = 0;
 	ifp->if_addrlen = 0;
+    // 激活该设备
 	if_attach(ifp);
 }
 

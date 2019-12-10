@@ -40,6 +40,7 @@ void test_ping()
 
 int main()
 {
+  // 创建一个虚拟设备
   pigeonattach(1);
   init();
   setipaddr("pg0", 0xc0a80002);  // 192.168.0.2

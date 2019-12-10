@@ -61,7 +61,9 @@ struct protosw {
 	short	pr_protocol;		/* protocol number */
 	short	pr_flags;		/* see below */
 /* protocol-protocol hooks */
+    // input routine?
 	void	(*pr_input)();		/* input to protocol (from below) */
+    // output routine?
 	int	(*pr_output)();		/* output to protocol (from above) */
 	void	(*pr_ctlinput)();	/* control input (from below) */
 	int	(*pr_ctloutput)();	/* control output (from above) */

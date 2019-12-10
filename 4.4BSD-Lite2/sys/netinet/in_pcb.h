@@ -49,8 +49,11 @@ struct inpcb {
 	u_short	inp_fport;		/* foreign port */
 	struct	in_addr inp_laddr;	/* local host table entry */
 	u_short	inp_lport;		/* local port */
+    // socket 套接字
 	struct	socket *inp_socket;	/* back pointer to socket */
+    // 设置具体的协议控制块
 	caddr_t	inp_ppcb;		/* pointer to per-protocol pcb */
+    // 路由表
 	struct	route inp_route;	/* placeholder for routing entry */
 	int	inp_flags;		/* generic IP/datagram flags */
 	struct	ip inp_ip;		/* header prototype; should have more */

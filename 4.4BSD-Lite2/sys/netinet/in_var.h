@@ -75,7 +75,7 @@ struct	in_aliasreq {
 
 #define IN_LNAOF(in, ifa) \
 	((ntohl((in).s_addr) & ~((struct in_ifaddr *)(ifa)->ia_subnetmask))
-			
+
 
 #ifdef	KERNEL
 extern	struct	in_ifaddr *in_ifaddr;

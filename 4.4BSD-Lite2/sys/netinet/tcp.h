@@ -39,18 +39,27 @@ typedef	u_long	tcp_seq;
  * Per RFC 793, September, 1981.
  */
 struct tcphdr {
+    // 源端口
 	u_short	th_sport;		/* source port */
+    // 目的端口号
 	u_short	th_dport;		/* destination port */
+    // 序列号
+    // 4个字节
+    // typedef u_long
 	tcp_seq	th_seq;			/* sequence number */
+    // 应答号
 	tcp_seq	th_ack;			/* acknowledgement number */
-#if BYTE_ORDER == LITTLE_ENDIAN 
+#if BYTE_ORDER == LITTLE_ENDIAN
 	u_char	th_x2:4,		/* (unused) */
+        // 首部长度
+        //  以4个字节为单位
 		th_off:4;		/* data offset */
 #endif
-#if BYTE_ORDER == BIG_ENDIAN 
+#if BYTE_ORDER == BIG_ENDIAN
 	u_char	th_off:4,		/* data offset */
 		th_x2:4;		/* (unused) */
 #endif
+
 	u_char	th_flags;
 #define	TH_FIN	0x01
 #define	TH_SYN	0x02
@@ -58,8 +67,11 @@ struct tcphdr {
 #define	TH_PUSH	0x08
 #define	TH_ACK	0x10
 #define	TH_URG	0x20
+    // 2个字节的窗口大小
 	u_short	th_win;			/* window */
+    // 2个字节的校验和
 	u_short	th_sum;			/* checksum */
+    // 紧急数据的偏移量
 	u_short	th_urp;			/* urgent pointer */
 };
 

@@ -51,6 +51,7 @@ struct socket {
 	short	so_linger;		/* time to linger while closing */
     // socket 内部的状态
 	short	so_state;		/* internal state flags SS_*, below */
+    // 协议控制块
 	caddr_t	so_pcb;			/* protocol control block */
 	struct	protosw *so_proto;	/* protocol handle */
 /*
@@ -94,6 +95,7 @@ struct socket {
     // 一个是send buffer
 	struct	sockbuf {
 		u_long	sb_cc;		/* actual chars in buffer */
+        // 最大字节数
 		u_long	sb_hiwat;	/* max actual char count */
 		u_long	sb_mbcnt;	/* chars of mbufs used */
 		u_long	sb_mbmax;	/* max chars of mbufs to use */

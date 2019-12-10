@@ -78,12 +78,13 @@ void	eoninput(), eonctlinput(), eonprotoinit();
 
 extern	struct domain inetdomain;
 
+// IP层协议的protosw结构
 struct protosw inetsw[] = {
 { 0,		&inetdomain,	0,		0,
   0,		ip_output,	0,		0,
   0,
   ip_init,	0,		ip_slowtimo,	ip_drain,	ip_sysctl
-},
+}, // 标识IP的管理函数，由内核访问
 { SOCK_DGRAM,	&inetdomain,	IPPROTO_UDP,	PR_ATOMIC|PR_ADDR,
   udp_input,	0,		udp_ctlinput,	ip_ctloutput,
   udp_usrreq,
